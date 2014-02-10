@@ -1,0 +1,188 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>百度网盘API文档 &mdash; baidupcsapi 0.1.4 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="baidupcsapi 0.1.4 documentation" href="#" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="#">baidupcsapi 0.1.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="api">
+<h1>百度网盘API文档<a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2>写在前面<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>就一个破脚本实在没什么可以写的，实在不会欢迎直接邮件问我
+yours086 # gmail.com</p>
+<p>基于 mozillazg 的 baidu-pcs-python-sdk 改写而成</p>
+<p>Github:https://github.com/mozillazg/baidu-pcs-python-sdk</p>
+</div>
+<div class="section" id="id2">
+<h2>安装<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>pip install baidupcsapi
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="id3">
+<h1>链接<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="api.html#api"><em>API列表</em></a></li>
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+<div class="section" id="id4">
+<h2>一个简单的例子<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">baidupcsapi</span> <span class="kn">import</span> <span class="n">PCS</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pcs</span> <span class="o">=</span> <span class="n">PCS</span><span class="p">(</span><span class="s">&#39;username&#39;</span><span class="p">,</span><span class="s">&#39;password&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">pcs</span><span class="o">.</span><span class="n">quota</span><span class="p">()</span><span class="o">.</span><span class="n">content</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">pcs</span><span class="o">.</span><span class="n">list_files</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">content</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id5">
+<h2>上传文件的进度条实现范例<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
+<dl class="docutils">
+<dt>回调函数参数要求 有size和progress两个参数名，</dt>
+<dd>size：文件总字节数
+progress：当前传输完成字节数</dd>
+</dl>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">progressbar</span>
+
+<span class="kn">from</span> <span class="nn">baidupcsapi</span> <span class="kn">import</span> <span class="n">PCS</span>
+<span class="k">class</span> <span class="nc">ProgressBar</span><span class="p">():</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">first_call</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">first_call</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">widgets</span> <span class="o">=</span> <span class="p">[</span><span class="n">progressbar</span><span class="o">.</span><span class="n">Percentage</span><span class="p">(),</span> <span class="s">&#39; &#39;</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">.</span><span class="n">Bar</span><span class="p">(</span><span class="n">marker</span><span class="o">=</span><span class="n">progressbar</span><span class="o">.</span><span class="n">RotatingMarker</span><span class="p">(</span><span class="s">&#39;&gt;&#39;</span><span class="p">)),</span>
+                            <span class="s">&#39; &#39;</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">.</span><span class="n">FileTransferSpeed</span><span class="p">()]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pbar</span> <span class="o">=</span> <span class="n">progressbar</span><span class="o">.</span><span class="n">ProgressBar</span><span class="p">(</span><span class="n">widgets</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">widgets</span><span class="p">,</span> <span class="n">maxval</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;size&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">first_call</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;size&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;progress&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pbar</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pbar</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;progress&#39;</span><span class="p">])</span>
+
+
+<span class="n">pcs</span> <span class="o">=</span> <span class="n">PCS</span><span class="p">(</span><span class="s">&#39;username&#39;</span><span class="p">,</span><span class="s">&#39;password&#39;</span><span class="p">)</span>
+<span class="n">test_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;bigfile.pdf&#39;</span><span class="p">,</span><span class="s">&#39;rb&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="n">ret</span> <span class="o">=</span> <span class="n">pcs</span><span class="o">.</span><span class="n">upload</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">,</span><span class="n">test_file</span><span class="p">,</span><span class="s">&#39;bigfile.pdf&#39;</span><span class="p">,</span><span class="n">callback</span><span class="o">=</span><span class="n">ProgressBar</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id6">
+<h2>合并文件<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h2>
+<p>可以用两个纯文本文档合并，这样产生的新文档是两个文本文档的文字合并
+注意upload系列的函数都可以指定callback参数</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">pcs</span> <span class="o">=</span> <span class="n">PCS</span><span class="p">(</span><span class="s">&#39;username&#39;</span><span class="p">,</span><span class="s">&#39;password&#39;</span><span class="p">)</span>
+<span class="k">print</span> <span class="s">&#39;chunk1&#39;</span>
+<span class="n">ret</span> <span class="o">=</span> <span class="n">pcs</span><span class="o">.</span><span class="n">upload_tmpfile</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s">&#39;1.txt&#39;</span><span class="p">,</span><span class="s">&#39;rb&#39;</span><span class="p">))</span>
+<span class="n">md51</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">ret</span><span class="o">.</span><span class="n">content</span><span class="p">)[</span><span class="s">&#39;md5&#39;</span><span class="p">]</span>
+<span class="k">print</span> <span class="s">&#39;chunk2&#39;</span>
+<span class="n">ret</span> <span class="o">=</span> <span class="n">pcs</span><span class="o">.</span><span class="n">upload_tmpfile</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s">&#39;2.txt&#39;</span><span class="p">,</span><span class="s">&#39;rb&#39;</span><span class="p">))</span>
+<span class="n">md52</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">ret</span><span class="o">.</span><span class="n">content</span><span class="p">)[</span><span class="s">&#39;md5&#39;</span><span class="p">]</span>
+<span class="k">print</span> <span class="s">&#39;merge&#39;</span>
+<span class="n">ret</span> <span class="o">=</span> <span class="n">pcs</span><span class="o">.</span><span class="n">upload_superfile</span><span class="p">(</span><span class="s">&#39;/3.txt&#39;</span><span class="p">,[</span><span class="n">md51</span><span class="p">,</span><span class="n">md52</span><span class="p">])</span>
+<span class="k">print</span> <span class="n">ret</span><span class="o">.</span><span class="n">content</span>
+<span class="c"># 查看3.txt</span>
+</pre></div>
+</div>
+<p>在根目录下就会有3.txt</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">百度网盘API文档</a><ul>
+<li><a class="reference internal" href="#id1">写在前面</a></li>
+<li><a class="reference internal" href="#id2">安装</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id3">链接</a><ul>
+<li><a class="reference internal" href="#id4">一个简单的例子</a></li>
+<li><a class="reference internal" href="#id5">上传文件的进度条实现范例</a></li>
+<li><a class="reference internal" href="#id6">合并文件</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="#">baidupcsapi 0.1.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, latyas,mozillazg.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+CHANGELOG.rst
+LICENSE.txt
+MANIFEST.in
+README.rst
+requirements.txt
+setup.py
+baidupcsapi/BTL.py
+baidupcsapi/__init__.py
+baidupcsapi/api.py
+baidupcsapi/bencode.py
+baidupcsapi/captcha.py
+baidupcsapi.egg-info/PKG-INFO
+baidupcsapi.egg-info/SOURCES.txt
+baidupcsapi.egg-info/dependency_links.txt
+baidupcsapi.egg-info/not-zip-safe
+baidupcsapi.egg-info/requires.txt
+baidupcsapi.egg-info/top_level.txt

@@ -1,0 +1,16 @@
+AUTHORS.rst
+HISTORY.rst
+LICENSE
+MANIFEST.in
+README.rst
+setup.cfg
+setup.py
+requests_toolbelt/__init__.py
+requests_toolbelt/multipart.py
+requests_toolbelt/ssl_adapter.py
+requests_toolbelt/user_agent.py
+requests_toolbelt.egg-info/PKG-INFO
+requests_toolbelt.egg-info/SOURCES.txt
+requests_toolbelt.egg-info/dependency_links.txt
+requests_toolbelt.egg-info/requires.txt
+requests_toolbelt.egg-info/top_level.txt
