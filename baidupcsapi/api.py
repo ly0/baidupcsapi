@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from functools import wraps
+import re
 import time
 import json
 import os
@@ -10,7 +11,6 @@ import pickle
 from hashlib import sha1,md5
 from urllib import urlencode
 from requests_toolbelt import MultipartEncoder
-
 import requests
 import bencode
 import captcha
@@ -220,6 +220,8 @@ class BaseClass(object):
                         'ppui_logintime':'5000',
                         'callback':'parent.bd__pcbs__oa36qm'}
         result = self.session.post('https://passport.baidu.com/v2/api/?login',data=login_data)
+        # check exception
+        self._check_account_exception(result.content)
         if not result.ok:
             raise LoginFailed('Logging failed.')
         logging.info('COOKIES' + str(self.session.cookies))
@@ -229,6 +231,19 @@ class BaseClass(object):
             raise LoginFailed('Logging failed.')
         logging.info('user %s Logged in BDUSS: %s' % (self.username, self.user['BDUSS']))
         self._save_cookies()
+
+    def _check_account_exception(self,content):
+        err_id = re.findall('err_no=([\d]+)',content)[0]
+
+        if err_id == '0':
+            return
+        error_message = {'120019':'Login failed too many times recently, please login your account on BAIDU first.'}
+        try:
+            msg = error_message[err_id]
+        except:
+            msg = 'unknown err_id=' + err_id
+        raise LoginFailed(msg)
+
 
     @check_login
     def _request(self, uri, method=None, url=None, extra_params=None,

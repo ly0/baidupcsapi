@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __title__ = 'baidupcsapi'
-__version__ = '0.1.6'
+__version__ = '0.1.8'
 __author__ = 'mozillazg,liyangjie'
 __license__ = 'MIT'
 

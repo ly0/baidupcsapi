@@ -101,6 +101,9 @@ PCS类
 ~~~~~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.cancel_download_task
 
+分享文件或文件夹
+~~~~~~~~~~~~~~~~
+.. automethod:: baidupcsapi.PCS.share
 
 回收站
 ~~~~~~
@@ -116,4 +119,5 @@ PCS类
 清空回收站
 ++++++++++
 .. automethod:: baidupcsapi.PCS.clean_recycle_bin
+
 
