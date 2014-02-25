@@ -15,11 +15,11 @@ from requests_toolbelt import MultipartEncoder
 import requests
 import bencode
 import captcha
-
+'''
 logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S')
-
+'''
 BAIDUPAN_SERVER = 'pan.baidu.com'
 BAIDUPCS_SERVER = 'pcs.baidu.com'
 
