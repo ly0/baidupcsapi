@@ -10,20 +10,22 @@ import logging
 import pickle
 from hashlib import sha1,md5
 from urllib import urlencode
+from zlib import crc32
 from requests_toolbelt import MultipartEncoder
 import requests
 import bencode
 import captcha
-'''
+
 logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S')
-'''
-BAIDUPCS_SERVER = 'pan.baidu.com'
+
+BAIDUPAN_SERVER = 'pan.baidu.com'
+BAIDUPCS_SERVER = 'pcs.baidu.com'
 
 #https://pcs.baidu.com/rest/2.0/pcs/manage?method=listhost -> baidu cdn
 # uses CDN_DOMAIN/monitor.jpg to test speed for each CDN
-api_template = 'http://%s/api/{0}' % BAIDUPCS_SERVER
+api_template = 'http://%s/api/{0}' % BAIDUPAN_SERVER
 
 class LoginFailed(Exception):
     """因为帐号原因引起的登录失败异常
@@ -101,14 +103,12 @@ class BaseClass(object):
         self.password = password
         self.user = {}
         self.progress_func = None
-        if os.path.exists('.pcs-server'):
-            import ConfigParser
-            config = ConfigParser.ConfigParser()
-            config.read('.pcs-server')
-            self.set_pcs_server(config.get('server','fastest'))
+        # 设置pcs服务器
+        logging.debug('setting pcs server')
+        self.set_pcs_server(self.get_fastest_pcs_server())
         self._initiate()
 
-    def test_fastest_mirror(self):
+    def get_fastest_mirror(self):
         """
         :returns: str -- 服务器地址
         """
@@ -124,25 +124,33 @@ class BaseClass(object):
             logging.info('TEST %s %s ms' % (server,int(end-start)))
         return min(time_record)[1]
 
-
-    def set_fastest_baidu_server(self):
-        """自动测试并设置最快的百度服务器
+    def get_fastest_pcs_server(self):
+        """设置最快的百度pcs服务器
         """
-        global BAIDUPCS_SERVER
-        BAIDUPCS_SERVER = self.test_fastest_mirror()
-        with open('.pcs-server','w') as f:
-            f.write('[server]\nfastest=%s' % BAIDUPCS_SERVER)
-        logging.info('BAIDUPCS_SERVER='+BAIDUPCS_SERVER)
+        url = 'http://pcs.baidu.com/rest/2.0/pcs/file?app_id=250528&method=locateupload'
+        ret = requests.get(url).content
+        foo = json.loads(ret)
+        return foo['host']
 
     def set_pcs_server(self,server):
+        """手动设置百度pcs服务器
+        :params server: 服务器地址或域名
+
+        .. warning::
+            不要加 http:// 和末尾的 /
+        """
+        global BAIDUPAN_SERVER
+        BAIDUPAN_SERVER = server
+
+    def set_pan_server(self,server):
         """手动设置百度网盘服务器
         :params server: 服务器地址或域名
 
         .. warning::
             不要加 http:// 和末尾的 /
         """
-        global BAIDUPCS_SERVER
-        BAIDUPCS_SERVER = server
+        global BAIDUPAN_SERVER
+        BAIDUPAN_SERVER = server
 
     def _remove_empty_items(self, data):
         for k, v in data.copy().items():
@@ -281,8 +289,8 @@ class BaseClass(object):
                 response = self.session.post(api, data=body, verify=False,headers=headers,**kwargs)
         else:
             api = url
-            if uri == 'filemanager':
-               response = self.session.post(api, params=params, verify=False, **kwargs)
+            if uri == 'filemanager' or uri == 'rapidupload' or uri == 'filemetas' or uri == 'precreate':
+                response = self.session.post(api, params=params, verify=False, **kwargs)
             else:
                 response = self.session.get(api, params=params, verify=False, **kwargs)
         return response
@@ -483,7 +491,7 @@ class PCS(BaseClass):
                                 * 文件名或路径名开头结尾不能是 ``.``
                                   或空白字符，空白字符包括：
                                   ``\\r, \\n, \\t, 空格, \\0, \\x0B`` 。
-        :return: Response 对象
+        :return: requests.Response 对象
         """
 
         params = {
@@ -599,7 +607,7 @@ class PCS(BaseClass):
                         "dest":dest,
                         "newname":__path(path)} for path in path_list]),
         }
-        url = 'http://{0}/api/filemanager'.format(BAIDUPCS_SERVER)
+        url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
         return self._request('filemanager', 'move', url=url, data=data, extra_params=params, **kwargs)
 
     def copy(self, path_list, dest, **kwargs):
@@ -627,7 +635,7 @@ class PCS(BaseClass):
                         "dest":dest,
                         "newname":__path(path)} for path in path_list]),
         }
-        url = 'http://{0}/api/filemanager'.format(BAIDUPCS_SERVER)
+        url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
         return self._request('filemanager', 'move', url=url, data=data, extra_params=params, **kwargs)
 
     def delete(self, path_list, **kwargs):
@@ -642,7 +650,7 @@ class PCS(BaseClass):
         data = {
                 'filelist': json.dumps([path for path in path_list])
         }
-        url = 'http://{0}/api/filemanager?opera=delete'.format(BAIDUPCS_SERVER)
+        url = 'http://{0}/api/filemanager?opera=delete'.format(BAIDUPAN_SERVER)
         return self._request('filemanager', 'delete', url=url, data=data, **kwargs)
 
     def share(self, file_ids, pwd=None, **kwargs):
@@ -755,7 +763,7 @@ class PCS(BaseClass):
             'source_url': source_url,
             'save_path': remote_path,
         }
-        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPCS_SERVER)
+        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
         return self._request('services/cloud_dl', 'add_task', url=url,
                              data=data, **kwargs)
 
@@ -806,7 +814,7 @@ class PCS(BaseClass):
             'source_path': remote_path,
             'type': '2' # 2 is torrent file
         }
-        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPCS_SERVER)
+        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
         return self._request('create', 'add_task', url=url, data=data, **kwargs)
 
     def get_remote_file_info(self, remote_path, type='2', **kwargs):
@@ -818,7 +826,7 @@ class PCS(BaseClass):
             'type': type,
             'source_path': remote_path
         }
-        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPCS_SERVER)
+        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
         return self._request('cloud_dl', 'query_sinfo', url=url, extra_params=params, **kwargs)
 
     def query_download_tasks(self, task_ids, operate_type=1, **kwargs):
@@ -884,7 +892,7 @@ class PCS(BaseClass):
             'task_ids': ','.join(map(str, task_ids)),
             'op_type': operate_type,
         }
-        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPCS_SERVER)
+        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
         return self._request('services/cloud_dl', 'query_task', url=url,
                              extra_params=params, **kwargs)
 
@@ -993,7 +1001,7 @@ class PCS(BaseClass):
             'create_time': create_time
 
         }
-        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPCS_SERVER)
+        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
         return self._request('services/cloud_dl', 'list_task', url=url, extra_params=params, **kwargs)
 
     def cancel_download_task(self, task_id, expires=None, **kwargs):
@@ -1010,7 +1018,7 @@ class PCS(BaseClass):
             'expires': expires,
             'task_id': task_id,
         }
-        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPCS_SERVER)
+        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
         return self._request('services/cloud_dl', 'cancle_task',
                              data=data, **kwargs)
 
@@ -1032,7 +1040,7 @@ class PCS(BaseClass):
             'order':order,
             'desc':desc
         }
-        url = 'http://{0}/api/recycle/list'.format(BAIDUPCS_SERVER)
+        url = 'http://{0}/api/recycle/list'.format(BAIDUPAN_SERVER)
         return self._request('recycle', 'list', url=url, extra_params=params, **kwargs)
 
     def restore_recycle_bin(self, fs_ids, **kwargs):
@@ -1047,7 +1055,7 @@ class PCS(BaseClass):
         data = {
             'filelist': json.dumps([fs_id for fs_id in fs_ids])
         }
-        url = 'http://{0}/api/recycle/restore'.format(BAIDUPCS_SERVER)
+        url = 'http://{0}/api/recycle/restore'.format(BAIDUPAN_SERVER)
         return self._request('recycle', 'restore', data=data, **kwargs)
 
     def clean_recycle_bin(self, **kwargs):
@@ -1057,6 +1065,231 @@ class PCS(BaseClass):
         :return: requests.Response
         """
 
-        url = 'http://{0}/api/recycle/clear'.format(BAIDUPCS_SERVER)
+        url = 'http://{0}/api/recycle/clear'.format(BAIDUPAN_SERVER)
         return self._request('recycle', 'clear', url=url, **kwargs)
 
+    def rapidupload(self,file_handler,path):
+        """秒传一个文件
+
+        :param file_handler: 文件handler, e.g. open('file','rb')
+        :type file_handler: file
+
+        :param path: 上传到服务器的路径，包含文件名
+        :type path: str
+
+        :return: requests.Response
+
+            .. note::
+                * 文件已在服务器上存在，不上传，返回示例
+                {
+
+                    "path" : "/apps/album/1.jpg",
+
+                    "size" : 372121,
+
+                    "ctime" : 1234567890,
+
+                    "mtime" : 1234567890,
+
+                    "md5" : "cb123afcc12453543ef",
+
+                    "fs_id" : 12345,
+
+                    "isdir" : 0,
+
+                    "request_id" : 12314124
+
+                }
+
+                * 文件不存在，需要上传
+
+                {"errno":404,"info":[],"request_id":XXX}
+
+                * 文件大小不足 256kb （slice-md5 == content-md5) 时
+
+                {"errno":2,"info":[],"request_id":XXX}
+
+                * 远程文件已存在
+
+                {"errno":-8,"info":[],"request_id":XXX}
+
+
+        """
+        file_handler.seek(0,2)
+        _BLOCK_SIZE = 2 ** 20
+        content_length = file_handler.tell()
+        file_handler.seek(0)
+
+        # 校验段为前 256kb
+        first_256bytes = file_handler.read(256 * 1024)
+        slice_md5 = md5(first_256bytes).hexdigest()
+
+        content_crc32 = crc32(first_256bytes).conjugate()
+        content_md5 = md5(first_256bytes)
+
+        while True:
+            block = file_handler.read(_BLOCK_SIZE)
+            if not block:
+                break
+            # 更新crc32和md5校验值
+            content_crc32 = crc32(block, content_crc32).conjugate()
+            content_md5.update(block)
+
+        data = {'path':path,
+                'content-length':content_length,
+                'content-md5':content_md5.hexdigest(),
+                'slice-md5':slice_md5,
+                'content-crc32':'%d' % (content_crc32.conjugate() & 0xFFFFFFFF)}
+        logging.debug('RAPIDUPLOAD DATA ' + str(data))
+        #url = 'http://pan.baidu.com/api/rapidupload'
+        return self._request('rapidupload','rapidupload',data=data)
+
+    def search(self, path, keyword, page=1, recursion=1, limit=1000):
+        """搜索文件
+
+        :param path: 搜索目录
+        :param keyword: 关键词
+        :param page: 返回第几页的数据
+        :param recursion: 是否递归搜索，默认为1 （似乎0和1都没影响，都是递归搜索的）
+        :param limit: 每页条目
+
+        :return: requests.Repsonse
+        返回结果和list_files一样结构
+        """
+        params = {'dir':path,
+                  'recusion':recursion,
+                  'key':keyword,
+                  'page':page,
+                  'num':limit}
+
+        #url = 'http://pan.baidu.com/api/search'
+
+        return self._request('search','search',extra_params=params)
+
+    def thumbnail(self, path, height, width, quality=100):
+        """获取文件缩略图
+
+        :param path: 远程文件路径
+        :param height: 缩略图高
+        :param width: 缩略图宽
+        :param quality: 缩略图质量，默认100
+
+        :return: requests.Response
+
+            .. note::
+                如果返回 HTTP 404 说明该文件不存在缩略图形式
+        """
+        params = {'ec':1,
+                  'path':path,
+                  'quality':quality,
+                  'width':width,
+                  'height':height}
+
+        url = 'http://{0}/rest/2.0/pcs/thumbnail'.format(BAIDUPCS_SERVER)
+        return self._request('thumbnail','generate', url=url, extra_params=params)
+
+    def meta(self,file_list):
+        """获得文件(s)的metainfo
+
+        :param file_list: 文件路径列表,如 ['/aaa.txt']
+        :type file_list: list
+
+        :return: requests.Response
+            .. note ::
+            示例
+
+            * 文件不存在
+
+            {"errno":12,"info":[{"errno":-9}],"request_id":3294861771}
+
+            * 文件存在
+            {
+                "errno": 0,
+
+                "info": [
+
+                    {
+
+                        "fs_id": 文件id,
+
+                        "path": "\/\u5c0f\u7c73\/mi2s\u5237recovery.rar",
+
+                        "server_filename": "mi2s\u5237recovery.rar",
+
+                        "size": 8292134,
+
+                        "server_mtime": 1391274570,
+
+                        "server_ctime": 1391274570,
+
+                        "local_mtime": 1391274570,
+
+                        "local_ctime": 1391274570,
+
+                        "isdir": 0,
+
+                        "category": 6,
+
+                        "path_md5": 279827390796736883,
+
+                        "delete_fs_id": 0,
+
+                        "object_key": "84221121-2193956150-1391274570512754",
+
+                        "block_list": [
+                            "76b469302a02b42fd0a548f1a50dd8ac"
+                        ],
+
+                        "md5": "76b469302a02b42fd0a548f1a50dd8ac",
+
+                        "errno": 0
+
+                    }
+
+                ],
+
+                "request_id": 2964868977
+
+            }
+
+        """
+        data = {'target':json.dumps(file_list)}
+
+        return self._request('filemetas?blocks=1','filemetas',data=data)
+
+    def check_file_blocks(self,path,size,block_list):
+        """文件块检查
+
+        :param path: 文件路径
+        :param size: 文件大小
+        :param block_list: 文件块的列表,注意按文件块顺序
+        :type block_list: list
+
+        .. note::
+            如果服务器不存在path的文件，则返回中的block_list会等于提交的block_list
+
+        :return: requests.Response
+            .. note::
+                返回示例
+                {
+                    "errno": 0,
+                    "path": "/18.rar",
+                    "request_id": 2462633013,
+                    "block_list": [
+                        "8da0ac878f3702c0768dc6ea6820d3ff",
+                        "3c1eb99b0e64993f38cd8317788a8855"
+                    ]
+                }
+
+                其中block_list是需要上传的块的MD5
+
+
+
+        """
+
+        data = {'path':path,
+                'size':size,
+                'isdir':0,
+                'block_list':json.dumps(block_list)}
+
+        return self._request('precreate','post',data=data)

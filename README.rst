@@ -41,7 +41,29 @@ To install baidupcsapi, simply:
     >>> pcs = PCS('username','password')
     >>> print pcs.quota().content
     >>> print pcs.list_files('/').content
-    
+
+断点续传
+-----------
+
+下载
+-------
+
+.. code-block:: python
+
+          >>> headers = {'Range': 'bytes=0-99'}
+          >>> pcs = PCS('username','password')
+          >>> pcs.download('/test_sdk/test.txt', headers=headers)
+上传
+-------
+
+有时间写个demo，大概是
+将文件分块，计算每一块的MD5
+precreate 对于服务器上的某个文件需要上传的块
+upload_tmpfile 上传临时文件（块）
+upload_superfile 合并块（在precreate返回所需块为空时调用本函数可合并文件）
+注意，百度服务器上文件是分块保存的，块不会消失
+
+  
 上传文件的进度条实现范例
 ------
 

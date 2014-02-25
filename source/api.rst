@@ -3,7 +3,6 @@
 API列表
 ================================================
 
-
 错误和异常
 ~~~~~~~~
 
@@ -18,14 +17,17 @@ PCS类
 
 连接设置
 ~~~~~~~~
-.. automethod:: baidupcsapi.PCS.test_fastest_mirror
-.. automethod:: baidupcsapi.PCS.set_fastest_baidu_server
+.. automethod:: baidupcsapi.PCS.get_fastest_mirror
+.. automethod:: baidupcsapi.PCS.get_fastest_pcs_server
 .. automethod:: baidupcsapi.PCS.set_pcs_server
-
+.. automethod:: baidupcsapi.PCS.set_pan_server
 
 空间配额信息
 ~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.quota
+
+基本文件操作
+==========
 
 上传单个文件
 ~~~~~~~~~~~~
@@ -66,16 +68,45 @@ PCS类
 
 
 高级功能
---------
+================
+
+获取文件meta info
+~~~~~~~~~~~~~~~~~
+.. automethod:: baidupcsapi.PCS.meta
+
+获取文件的块差异列表
+~~~~~~~~~~~~~~~~~
+.. automethod:: baidupcsapi.PCS.check_file_blocks
+
+获取缩略图
+~~~~~~~~~~~~~~~~~
+.. automethod:: baidupcsapi.PCS.thumbnail
+
+搜索文件
+~~~~~~~~~~~~~~~~~
+.. automethod:: baidupcsapi.PCS.search
+
+秒传（看服务器是否已存在该文件）
+~~~~~~~~~~~~~~~~~
+.. automethod:: baidupcsapi.PCS.rapidupload
 
 
 获取流式文件列表
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.list_streams
 
 下载流式文件
-~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.download
+
+分享文件或文件夹
+~~~~~~~~~~~~~~~~~
+.. automethod:: baidupcsapi.PCS.share
+
+
+
+离线下载
+=======
 
 添加离线下载任务
 ~~~~~~~~~~~~~~~~
@@ -90,34 +121,32 @@ PCS类
 .. automethod:: baidupcsapi.PCS.download_tasks_number
 
 精确查询离线下载任务
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.query_download_tasks
 
 查询离线下载任务列表
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.list_download_tasks
 
 取消离线下载任务
 ~~~~~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.cancel_download_task
 
-分享文件或文件夹
-~~~~~~~~~~~~~~~~
-.. automethod:: baidupcsapi.PCS.share
+
 
 回收站
-~~~~~~
+======
 
 查询回收站文件
-++++++++++++++
+~~~~~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.list_recycle_bin
 
 还原文件或目录
-++++++++++++++++++
+~~~~~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.restore_recycle_bin
 
 清空回收站
-++++++++++
+~~~~~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.clean_recycle_bin
 
 

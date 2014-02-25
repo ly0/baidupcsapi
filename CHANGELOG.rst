@@ -1,6 +1,16 @@
 Changelog
 =========
 
+0.2.0 (2014-02-25)
+-----------------
+* 增加秒传接口
+* 增加缩略图接口
+* 删除自动设置pan server接口
+* 增加返回pcs最快接口（和pan不一样，每次初始化的时候调用set_pcs_server(get_fatest_pcs_server) // set_pan_server(get_fatest_mirror)即可)
+* 增加文件meta info接口
+* 增加搜索文件接口
+* 增加文件块差别检查接口
+
 0.1.8 (2014-02-14)
 -----------------
 加入了登录时错误检查
