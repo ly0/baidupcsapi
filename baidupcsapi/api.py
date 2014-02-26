@@ -1068,7 +1068,7 @@ class PCS(BaseClass):
         url = 'http://{0}/api/recycle/clear'.format(BAIDUPAN_SERVER)
         return self._request('recycle', 'clear', url=url, **kwargs)
 
-    def rapidupload(self,file_handler,path):
+    def rapidupload(self,file_handler,path, **kwargs):
         """秒传一个文件
 
         :param file_handler: 文件handler, e.g. open('file','rb')
@@ -1142,9 +1142,9 @@ class PCS(BaseClass):
                 'content-crc32':'%d' % (content_crc32.conjugate() & 0xFFFFFFFF)}
         logging.debug('RAPIDUPLOAD DATA ' + str(data))
         #url = 'http://pan.baidu.com/api/rapidupload'
-        return self._request('rapidupload','rapidupload',data=data)
+        return self._request('rapidupload','rapidupload',data=data, **kwargs)
 
-    def search(self, path, keyword, page=1, recursion=1, limit=1000):
+    def search(self, path, keyword, page=1, recursion=1, limit=1000, **kwargs):
         """搜索文件
 
         :param path: 搜索目录
@@ -1164,9 +1164,9 @@ class PCS(BaseClass):
 
         #url = 'http://pan.baidu.com/api/search'
 
-        return self._request('search','search',extra_params=params)
+        return self._request('search','search',extra_params=params, **kwargs)
 
-    def thumbnail(self, path, height, width, quality=100):
+    def thumbnail(self, path, height, width, quality=100, **kwargs):
         """获取文件缩略图
 
         :param path: 远程文件路径
@@ -1186,9 +1186,9 @@ class PCS(BaseClass):
                   'height':height}
 
         url = 'http://{0}/rest/2.0/pcs/thumbnail'.format(BAIDUPCS_SERVER)
-        return self._request('thumbnail','generate', url=url, extra_params=params)
+        return self._request('thumbnail','generate', url=url, extra_params=params, **kwargs)
 
-    def meta(self,file_list):
+    def meta(self,file_list, **kwargs):
         """获得文件(s)的metainfo
 
         :param file_list: 文件路径列表,如 ['/aaa.txt']
@@ -1255,9 +1255,9 @@ class PCS(BaseClass):
         """
         data = {'target':json.dumps(file_list)}
 
-        return self._request('filemetas?blocks=1','filemetas',data=data)
+        return self._request('filemetas?blocks=1','filemetas',data=data, **kwargs)
 
-    def check_file_blocks(self,path,size,block_list):
+    def check_file_blocks(self,path,size,block_list, **kwargs):
         """文件块检查
 
         :param path: 文件路径
@@ -1292,4 +1292,5 @@ class PCS(BaseClass):
                 'isdir':0,
                 'block_list':json.dumps(block_list)}
 
-        return self._request('precreate','post',data=data)
+        return self._request('precreate','post',data=data, **kwargs)
+
