@@ -139,8 +139,8 @@ class BaseClass(object):
         .. warning::
             不要加 http:// 和末尾的 /
         """
-        global BAIDUPAN_SERVER
-        BAIDUPAN_SERVER = server
+        global BAIDUPCS_SERVER
+        BAIDUPCS_SERVER = server
 
     def set_pan_server(self,server):
         """手动设置百度网盘服务器
@@ -616,12 +616,19 @@ class PCS(BaseClass):
         :type rename_pair_list: list
 
         """
-        foo = dict(rename_pair_list)
+        foo = []
+        for path,newname in rename_pair_list:
+            foo.append({'path':path,
+                        'newname':newname
+            })
+
         data = {'filelist':json.dumps(foo)}
         params = {
             'opera':'rename'
         }
+
         url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
+        logging.debug('rename '+str(data)+'URL:'+url)
         return self._request('filemanager', 'rename', url=url, data=data, extra_params=params, **kwargs)
 
     def copy(self, path_list, dest, **kwargs):
