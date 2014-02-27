@@ -609,6 +609,20 @@ class PCS(BaseClass):
         }
         url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
         return self._request('filemanager', 'move', url=url, data=data, extra_params=params, **kwargs)
+    def rename(self, rename_pair_list, **kwargs):
+        """重命名
+
+        :param rename_pair_list: 需要重命名的文件(夹)pair （路径，新名称）列表,如[('/aa.txt','bb.txt')]
+        :type rename_pair_list: list
+
+        """
+        foo = dict(rename_pair_list)
+        data = {'filelist':json.dumps(foo)}
+        params = {
+            'opera':'move'
+        }
+        url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
+        return self._request('filemanager', 'rename', url=url, data=data, extra_params=params, **kwargs)
 
     def copy(self, path_list, dest, **kwargs):
         """

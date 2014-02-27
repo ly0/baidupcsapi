@@ -49,6 +49,9 @@ PCS类
 ~~~~~~~~
 .. automethod:: baidupcsapi.PCS.mkdir
 
+重命名文件(夹)
+~~~~~~~~
+.. automethod:: baidupcsapi.PCS.rename
 
 获取目录下的文件列表
 ~~~~~~~~~~~~~~~~~~~~
