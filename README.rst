@@ -9,7 +9,7 @@
     :alt: Number of PyPI downloads
 
 .. image:: https://badge.waffle.io/liyangjie/baidupcsapi.png?label=Ready
-     :target: https://waffle.io/liyangjie/baidupcsapi
+     :target: https://waffle.io/ly0/baidupcsapi
      :alt: Issues in Ready
 百度网盘现在不开放PCS API，所以目前只能用百度自己的API
 

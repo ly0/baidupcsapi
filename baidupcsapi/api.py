@@ -619,7 +619,7 @@ class PCS(BaseClass):
         foo = dict(rename_pair_list)
         data = {'filelist':json.dumps(foo)}
         params = {
-            'opera':'move'
+            'opera':'rename'
         }
         url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
         return self._request('filemanager', 'rename', url=url, data=data, extra_params=params, **kwargs)
