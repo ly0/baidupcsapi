@@ -108,8 +108,8 @@ class BaseClass(object):
         self.set_pcs_server(self.get_fastest_pcs_server())
         self._initiate()
 
-    def get_fastest_mirror(self):
-        """
+    def get_fastest_pcs_server_test(self):
+        """通过测试返回最快的pcs服务器
         :returns: str -- 服务器地址
         """
         ret = requests.get('https://pcs.baidu.com/rest/2.0/pcs/manage?method=listhost').content
@@ -125,7 +125,7 @@ class BaseClass(object):
         return min(time_record)[1]
 
     def get_fastest_pcs_server(self):
-        """设置最快的百度pcs服务器
+        """通过百度返回设置最快的pcs服务器
         """
         url = 'http://pcs.baidu.com/rest/2.0/pcs/file?app_id=250528&method=locateupload'
         ret = requests.get(url).content
@@ -141,16 +141,6 @@ class BaseClass(object):
         """
         global BAIDUPCS_SERVER
         BAIDUPCS_SERVER = server
-
-    def set_pan_server(self,server):
-        """手动设置百度网盘服务器
-        :params server: 服务器地址或域名
-
-        .. warning::
-            不要加 http:// 和末尾的 /
-        """
-        global BAIDUPAN_SERVER
-        BAIDUPAN_SERVER = server
 
     def _remove_empty_items(self, data):
         for k, v in data.copy().items():
@@ -628,6 +618,7 @@ class PCS(BaseClass):
         }
 
         url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
+        print '请求url',url
         logging.debug('rename '+str(data)+'URL:'+url)
         return self._request('filemanager', 'rename', url=url, data=data, extra_params=params, **kwargs)
 
@@ -1314,4 +1305,3 @@ class PCS(BaseClass):
                 'block_list':json.dumps(block_list)}
 
         return self._request('precreate','post',data=data, **kwargs)
-

@@ -17,10 +17,9 @@ PCS类
 
 连接设置
 ~~~~~~~~
-.. automethod:: baidupcsapi.PCS.get_fastest_mirror
+.. automethod:: baidupcsapi.PCS.get_fastest_pcs_server_test
 .. automethod:: baidupcsapi.PCS.get_fastest_pcs_server
 .. automethod:: baidupcsapi.PCS.set_pcs_server
-.. automethod:: baidupcsapi.PCS.set_pan_server
 
 空间配额信息
 ~~~~~~~~~~~~
