@@ -9,17 +9,17 @@ import os
 import logging
 import pickle
 from hashlib import sha1,md5
-from urllib import urlencode
+from urllib import urlencode, quote
 from zlib import crc32
 from requests_toolbelt import MultipartEncoder
 import requests
 import bencode
 import captcha
-'''
+
 logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S')
-'''
+
 BAIDUPAN_SERVER = 'pan.baidu.com'
 BAIDUPCS_SERVER = 'pcs.baidu.com'
 
@@ -242,7 +242,6 @@ class BaseClass(object):
             msg = 'unknown err_id=' + err_id
         raise LoginFailed(msg)
 
-
     @check_login
     def _request(self, uri, method=None, url=None, extra_params=None,
                  data=None, files=None, callback=None, **kwargs):
@@ -250,20 +249,23 @@ class BaseClass(object):
             'method': method,
             'app_id':"250528",
             'BDUSS':self.user['BDUSS'],
-            't':int(time.time()),
+            't':str(int(time.time())),
             'bdstoken':self.user['token']
         }
         if extra_params:
             params.update(extra_params)
             self._remove_empty_items(params)
+
         if not url:
             url = self.api_template.format(uri)
         if data or files:
+
             if '?' in url:
                 api = "%s&%s" % (url, urlencode(params))
             else:
                 api = '%s?%s' % (url, urlencode(params))
 
+            #print params
             if data:
                 self._remove_empty_items(data)
                 response = self.session.post(api, data=data, verify=False,
@@ -358,9 +360,9 @@ class PCS(BaseClass):
             'filename':filename
         }
 
-        files = {'file': (filename,file_handler)}
+        files = {'file': (quote(filename),file_handler)}
 
-        url = 'https://pcs.baidu.com/rest/2.0/pcs/file'
+        url = 'https://{0}/rest/2.0/pcs/file'.format(BAIDUPCS_SERVER)
         return self._request('file', 'upload', url=url, extra_params=params,
                              files=files, callback=callback, **kwargs)
 
@@ -413,7 +415,7 @@ class PCS(BaseClass):
             'type': 'tmpfile'
         }
         files = {'file': (str(int(time.time())),file_handler)}
-        url = 'https://pcs.baidu.com/rest/2.0/pcs/file'
+        url = 'https://{0}/rest/2.0/pcs/file'.format(BAIDUPCS_SERVER)
         return self._request('file', 'upload', url=url, extra_params=params,callback=callback,
                              files=files, **kwargs)
 
@@ -455,7 +457,7 @@ class PCS(BaseClass):
         data = {
             'param': json.dumps({'block_list': block_list}),
         }
-        url = 'https://pcs.baidu.com/rest/2.0/pcs/file'
+        url = 'https://{0}/rest/2.0/pcs/file'.format(BAIDUPCS_SERVER)
         return self._request('file', 'createsuperfile', url=url, extra_params=params,
                              data=data, **kwargs)
 
@@ -487,7 +489,7 @@ class PCS(BaseClass):
         params = {
             'path': remote_path,
         }
-        url = 'https://pcs.baidu.com/rest/2.0/pcs/file'
+        url = 'https://{0}/rest/2.0/pcs/file'.format(BAIDUPCS_SERVER)
         return self._request('file', 'download', url=url,
                              extra_params=params, **kwargs)
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __title__ = 'baidupcsapi'
-__version__ = '0.2.8'
+__version__ = '0.2.10'
 __author__ = 'mozillazg,liyangjie'
 __license__ = 'MIT'
 
@@ -25,10 +25,10 @@ setup(
     name='baidupcsapi',
     version=__version__,
     description='百度网盘API',
-    url='https://github.com/liyangjie/baidupcsapi',
-    download_url='https://github.com/liyangjie/baidupcsapi',
+    url='https://github.com/ly0/baidupcsapi',
+    download_url='https://github.com/ly0/baidupcsapi',
     author=__author__,
-    author_email='mozillazg101@gmail.com,yours086@gmail.com',
+    author_email='mozillazg101@gmail.com,li@ds2k8.com',
     license=__license__,
     packages=packages,
     package_data={'': ['LICENSE.txt']},
