@@ -8,6 +8,8 @@ import json
 import os
 import logging
 import pickle
+import string
+import random
 from hashlib import sha1,md5
 from urllib import urlencode, quote
 from zlib import crc32
@@ -242,6 +244,11 @@ class BaseClass(object):
             msg = 'unknown err_id=' + err_id
         raise LoginFailed(msg)
 
+    def _params_utf8(self,params):
+        for k,v in params.items():
+            if isinstance(v,unicode):
+                params[k] = v.encode('utf-8')
+
     @check_login
     def _request(self, uri, method=None, url=None, extra_params=None,
                  data=None, files=None, callback=None, **kwargs):
@@ -256,6 +263,7 @@ class BaseClass(object):
             params.update(extra_params)
             self._remove_empty_items(params)
 
+        self._params_utf8(params)
         if not url:
             url = self.api_template.format(uri)
         if data or files:
@@ -360,7 +368,8 @@ class PCS(BaseClass):
             'filename':filename
         }
 
-        files = {'file': (quote(filename),file_handler)}
+        tmp_filename = ''.join(random.sample(string.ascii_letters,10))
+        files = {'file': (tmp_filename,file_handler)}
 
         url = 'https://{0}/rest/2.0/pcs/file'.format(BAIDUPCS_SERVER)
         return self._request('file', 'upload', url=url, extra_params=params,
