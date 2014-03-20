@@ -1,4 +1,2 @@
 requests>=2.0.0
 requests_toolbelt>=0.1.2
-Image>=2.0.0
-Pillow>=2.0.0

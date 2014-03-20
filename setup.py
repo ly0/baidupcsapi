@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __title__ = 'baidupcsapi'
-__version__ = '0.2.11'
+__version__ = '0.2.12'
 __author__ = 'mozillazg,liyangjie'
 __license__ = 'MIT'
 
@@ -12,7 +12,6 @@ from setuptools import setup
 requirements = [
     'requests>=1.1.0',
     'requests_toolbelt>=0.1.2',
-    'Pillow>=2.0.0'
 ]
 packages = [
     'baidupcsapi',

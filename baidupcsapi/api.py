@@ -16,7 +16,6 @@ from zlib import crc32
 from requests_toolbelt import MultipartEncoder
 import requests
 import bencode
-import captcha
 '''
 logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
@@ -98,13 +97,17 @@ def check_login(func):
 class BaseClass(object):
     """提供PCS类的基本方法
     """
-    def __init__(self, username, password, api_template=api_template):
+    def __init__(self, username, password, api_template=api_template, captcha_func=None):
         self.session = requests.session()
         self.api_template = api_template
         self.username = username
         self.password = password
         self.user = {}
         self.progress_func = None
+        if captcha_func:
+            self.captcha_func = captcha_func
+        else:
+            self.captcha_func = self.show_captcha
         # 设置pcs服务器
         logging.debug('setting pcs server')
         self.set_pcs_server(self.get_fastest_pcs_server())
@@ -191,11 +194,16 @@ class BaseClass(object):
             logging.debug("requiring captcha")
             url = "https://passport.baidu.com/cgi-bin/genimage?" + code_string
             jpeg = self.session.get(url).content
-            captcha.show(jpeg)
-            verifycode = raw_input('captcha > ')
+            verifycode = self.captcha_func(jpeg)
         else:
             verifycode = ""
         return (code_string,verifycode)
+
+    def show_captcha(self, jpeg):
+        import captcha
+        captcha.show(jpeg)
+        verifycode = raw_input('captcha > ')
+        return verifycode
 
     def _login(self):
         #Login
@@ -297,13 +305,17 @@ class BaseClass(object):
 
 
 class PCS(BaseClass):
-    def __init__(self,  username, password, api_template=api_template):
+    def __init__(self,  username, password, captcha_callback=None):
         """
         :param username: 百度网盘的用户名
         :type username: str
 
         :param password: 百度网盘的密码
         :type password: str
+
+        :param captcha_callback: 验证码的回调函数
+            .. note::
+                该函数会获得一个jpeg文件的内容，返回值需为验证码
         """
         super(PCS, self).__init__(username, password, api_template)
 
