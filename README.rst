@@ -13,6 +13,9 @@
      :alt: Issues in Ready
 百度网盘现在不开放PCS API，所以目前只能用百度自己的API
 
+一个基于此api的 fuse（测试环境ubuntu12.04）
+http://github.com/ly0/baidu-fuse
+
 * 文档 http://baidupcsapi.rtfd.org
 * Free software: MIT license
 * PyPI: https://pypi.python.org/pypi/baidupcsapi
