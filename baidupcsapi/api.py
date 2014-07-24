@@ -10,12 +10,17 @@ import logging
 import pickle
 import string
 import random
-from hashlib import sha1,md5
+import base64
+import urllib
+from hashlib import sha1, md5
 from urllib import urlencode, quote
 from zlib import crc32
 from requests_toolbelt import MultipartEncoder
 import requests
 import bencode
+import rsa
+
+
 '''
 logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
@@ -204,32 +209,50 @@ class BaseClass(object):
         captcha.show(jpeg)
         verifycode = raw_input('captcha > ')
         return verifycode
+        
+    def _get_publickey(self):
+        url = 'https://passport.baidu.com/v2/getpublickey?token=' + \
+            self.user['token']
+        content = self.session.get(url).content
+        jdata = json.loads(content.replace('\'','"'))
+        return (jdata['pubkey'], jdata['key'])
 
     def _login(self):
-        #Login
+        # Login
         code_string, captcha = self._get_captcha()
-        login_data = {'staticpage':'http://www.baidu.com/cache/user/html/v3Jump.html',
-                        'charset':'UTF-8',
-                        'token':self.user['token'],
-                        'tpl':'mn',
-                        'apiver':'v3',
-                        'tt':str(int(time.time())),
-                        'codestring':code_string,
-                        'isPhone':'false',
-                        'safeflg':'0',
-                        'u':'http://www.baidu.com/',
-                        'quick_user':'0',
-                        'usernamelogin':'1',
-                        'splogin':'rate',
-                        'username':self.username,
-                        'password':self.password,
-                        'verifycode':captcha,
-                        'mem_pass':'on',
-                        'ppui_logintime':'5000',
-                        'callback':'parent.bd__pcbs__oa36qm'}
-        result = self.session.post('https://passport.baidu.com/v2/api/?login',data=login_data)
+
+        pubkey, rsakey = self._get_publickey()
+        key = rsa.PublicKey.load_pkcs1_openssl_pem(pubkey)
+        password_rsaed = base64.b64encode(rsa.encrypt(self.password, key))
+
+        login_data = {'staticpage': 'http://www.baidu.com/cache/user/html/v3Jump.html',
+                      'charset': 'UTF-8',
+                      'token': self.user['token'],
+                      'tpl': 'pp',
+                      'subpro': '',
+                      'apiver': 'v3',
+                      'tt': str(int(time.time())),
+                      'codestring': code_string,
+                      'isPhone': 'false',
+                      'safeflg': '0',
+                      'u': 'https://passport.baidu.com/',
+                      'quick_user': '0',
+                      'logLoginType': 'pc_loginBasic',
+                      'loginmerge': 'true',
+                      'logintype': 'basicLogin',
+                      'username': self.username,
+                      'password': password_rsaed,
+                      'verifycode': captcha,
+                      'mem_pass': 'on',
+                      'rsakey': str(rsakey),
+                      'crypttype': 12,
+                      'ppui_logintime': '50918',
+                      'callback': 'parent.bd__pcbs__oa36qm'}
+        result = self.session.post(
+            'https://passport.baidu.com/v2/api/?login', data=login_data)
         # check exception
         self._check_account_exception(result.content)
+
         if not result.ok:
             raise LoginFailed('Logging failed.')
         logging.info('COOKIES' + str(self.session.cookies))
@@ -237,7 +260,8 @@ class BaseClass(object):
             self.user['BDUSS'] = self.session.cookies['BDUSS']
         except:
             raise LoginFailed('Logging failed.')
-        logging.info('user %s Logged in BDUSS: %s' % (self.username, self.user['BDUSS']))
+        logging.info('user %s Logged in BDUSS: %s' %
+                     (self.username, self.user['BDUSS']))
         self._save_cookies()
 
     def _check_account_exception(self,content):
