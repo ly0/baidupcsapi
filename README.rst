@@ -4,8 +4,8 @@
 随时更新处
 -----------
 
-百度网盘登录现在需要RSA加密后传输, 详情请参考 *api.py* 中的 *PCS._get_pubkey* 和 *PCS._login* 函数
-
+* 百度网盘登录现在需要RSA加密后传输, 详情请参考 *api.py* 中的 *PCS._get_pubkey* 和 *PCS._login* 函数
+* 新加入 PCS.download_url 方法, 可以直接获得可用下载链接 (支持批量下载, 参数为 *str* 或者 *str list*)
 
 百度网盘现在不开放PCS API，所以目前只能用百度自己的API
 
