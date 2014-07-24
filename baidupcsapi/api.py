@@ -505,10 +505,86 @@ class PCS(BaseClass):
         url = 'https://{0}/rest/2.0/pcs/file'.format(BAIDUPCS_SERVER)
         return self._request('file', 'createsuperfile', url=url, extra_params=params,
                              data=data, **kwargs)
+    def get_sign(self):
+        # referred:
+        # https://github.com/PeterDing/iScript/blob/master/pan.baidu.com.py
+        url = 'http://pan.baidu.com/disk/home'
+        r = self.session.get(url)
+        html = r.content
+        sign1 = re.search(r'sign1 = \'(.+?)\';', html).group(1)
+        sign3 = re.search(r'sign3 = \'(.+?)\';', html).group(1)
+        timestamp = re.search(r'timestamp = \'(.+?)\';', html).group(1)
+
+        def sign2(j, r):
+            a = []
+            p = []
+            o = ''
+            v = len(j)
+
+            for q in xrange(256):
+                a.append(ord(j[q % v]))
+                p.append(q)
+
+            u = 0
+            for q in xrange(256):
+                u = (u + p[q] + a[q]) % 256
+                t = p[q]
+                p[q] = p[u]
+                p[u] = t
+
+            i = 0
+            u = 0
+            for q in xrange(len(r)):
+                i = (i + 1) % 256
+                u = (u + p[i]) % 256
+                t = p[i]
+                p[i] = p[u]
+                p[u] = t
+                k = p[((p[i] + p[u]) % 256)]
+                o += chr(ord(r[q]) ^ k)
+
+            return base64.b64encode(o)
+
+        self.dsign = sign2(sign3, sign1)
+        self.timestamp = timestamp
+
+    def download_url(self, remote_path, **kwargs):
+        """返回目标文件可用的下载地址
+        :param remote_path: 每一项代表需要下载的文件路径
+        :type remote_path: str list
+        """
+        if not hasattr(self, 'dsign'):
+            self.get_sign()
+
+        if isinstance(remote_path, str) or isinstance(remote_path, unicode):
+            remote_path = [remote_path]
+
+        file_list = []
+        jdata = json.loads(self.meta(remote_path).content)
+        if jdata['errno'] != 0:
+            return None
+
+        for entry in jdata['info']:
+            file_list.append(entry['fs_id'])
+
+        data = {
+            "sign": self.dsign,
+            "timestamp": self.timestamp,
+            "fidlist": json.dumps(file_list),
+            "type": "dlink"
+        }
+        url = 'http://pan.baidu.com/api/download?bdstoken=%s&app_id=250528' % self.user['token']
+        content = self.session.post(url, data=data).content
+
+        ret_jdata = json.loads(content)
+        if ret_jdata['errno'] != 0:
+            return
+
+        return [self.session.get(i['dlink']).url for i in json.loads(content)['dlink']]
 
     def download(self, remote_path, **kwargs):
         """下载单个文件。
-
+        @Deprecated
         download 接口支持HTTP协议标准range定义，通过指定range的取值可以实现
         断点下载功能。 例如：如果在request消息中指定“Range: bytes=0-99”，
         那么响应消息中会返回该文件的前100个字节的内容；
