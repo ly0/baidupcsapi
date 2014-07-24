@@ -1,16 +1,10 @@
 百度网盘API
 ====================================
-.. image:: https://badge.fury.io/py/baidupcsapi.png
-    :target: http://badge.fury.io/py/baidupcsapi
-    :alt: Latest version
 
-.. image:: https://pypip.in/d/baidupcsapi/badge.png
-    :target: https://crate.io/packages/baidupcsapi/
-    :alt: Number of PyPI downloads
+## 随时更新处
+百度网盘登录现在需要RSA加密后传输, 详情请参考 *api.py* 中的 *PCS._get_pubkey* 和 *PCS._login* 函数
 
-.. image:: https://badge.waffle.io/liyangjie/baidupcsapi.png?label=Ready
-     :target: https://waffle.io/ly0/baidupcsapi
-     :alt: Issues in Ready
+
 百度网盘现在不开放PCS API，所以目前只能用百度自己的API
 
 一个基于此api的 fuse（测试环境ubuntu12.04）
