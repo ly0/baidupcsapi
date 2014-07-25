@@ -44,6 +44,10 @@ PCS类
 ~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.download
 
+获得文件列表的真实下载地址
+~~~~~~~~~~~~
+.. automethod:: baidupcsapi.PCS.download_url
+
 创建目录
 ~~~~~~~~
 .. automethod:: baidupcsapi.PCS.mkdir
