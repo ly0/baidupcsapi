@@ -268,7 +268,7 @@ class BaseClass(object):
                 'https://passport.baidu.com/v2/api/?login', data=login_data)
 
             # 是否需要验证码
-            if 'err_no=257' in result.content:
+            if 'err_no=257' in result.content or 'err_no=6' in result.content:
                 code_string = re.findall('codeString=(.*?)&', result.content)[0]
                 logging.debug('need captcha, codeString=' + code_string)
                 captcha = self._get_captcha(code_string)
@@ -1467,5 +1467,3 @@ class PCS(BaseClass):
                 'block_list': json.dumps(block_list)}
 
         return self._request('precreate', 'post', data=data, **kwargs)
-
-
