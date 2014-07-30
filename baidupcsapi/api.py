@@ -11,7 +11,6 @@ import pickle
 import string
 import random
 import base64
-import urllib
 from hashlib import sha1, md5
 from urllib import urlencode, quote
 from zlib import crc32
@@ -19,6 +18,7 @@ from requests_toolbelt import MultipartEncoder
 import requests
 import bencode
 import rsa
+import urllib
 
 
 '''
@@ -29,21 +29,27 @@ logging.basicConfig(level=logging.DEBUG,
 BAIDUPAN_SERVER = 'pan.baidu.com'
 BAIDUPCS_SERVER = 'pcs.baidu.com'
 
-#https://pcs.baidu.com/rest/2.0/pcs/manage?method=listhost -> baidu cdn
+# https://pcs.baidu.com/rest/2.0/pcs/manage?method=listhost -> baidu cdn
 # uses CDN_DOMAIN/monitor.jpg to test speed for each CDN
 api_template = 'http://%s/api/{0}' % BAIDUPAN_SERVER
 
+
 class LoginFailed(Exception):
+
     """因为帐号原因引起的登录失败异常
     如果是超时则是返回Timeout的异常
     """
     pass
 
 # experimental
+
+
 class CancelledError(Exception):
+
     """
     用户取消文件上传
     """
+
     def __init__(self, msg):
         self.msg = msg
         Exception.__init__(self, msg)
@@ -55,28 +61,31 @@ class CancelledError(Exception):
 
 
 class BufferReader(MultipartEncoder):
+
     """将multipart-formdata转化为stream形式的Proxy类
     """
+
     def __init__(self, fields, boundary=None, callback=None, cb_args=(), cb_kwargs={}):
         self._callback = callback
         self._progress = 0
         self._cb_args = cb_args
         self._cb_kwargs = cb_kwargs
-        super(BufferReader,self).__init__(fields,boundary)
+        super(BufferReader, self).__init__(fields, boundary)
 
-    def read(self,size=None):
-        chunk = super(BufferReader,self).read(size)
+    def read(self, size=None):
+        chunk = super(BufferReader, self).read(size)
         self._progress += int(len(chunk))
         self._cb_kwargs.update({
-            'size'    : self._len,
+            'size': self._len,
             'progress': self._progress
         })
         if self._callback:
             try:
                 self._callback(*self._cb_args, **self._cb_kwargs)
-            except: # catches exception from the callback
+            except:  # catches exception from the callback
                 raise CancelledError('The upload was cancelled.')
         return chunk
+
 
 def check_login(func):
     """检查用户登录状态
@@ -88,7 +97,8 @@ def check_login(func):
             try:
                 foo = json.loads(ret.content)
                 if foo.has_key('errno') and foo['errno'] == -6:
-                    logging.debug('Offline, deleting cookies file then relogin.')
+                    logging.debug(
+                        'Offline, deleting cookies file then relogin.')
                     path = '.{0}.cookies'.format(args[0].username)
                     if os.path.exists(path):
                         os.remove(path)
@@ -100,8 +110,10 @@ def check_login(func):
 
 
 class BaseClass(object):
+
     """提供PCS类的基本方法
     """
+
     def __init__(self, username, password, api_template=api_template, captcha_func=None):
         self.session = requests.session()
         self.api_template = api_template
@@ -122,16 +134,17 @@ class BaseClass(object):
         """通过测试返回最快的pcs服务器
         :returns: str -- 服务器地址
         """
-        ret = requests.get('https://pcs.baidu.com/rest/2.0/pcs/manage?method=listhost').content
+        ret = requests.get(
+            'https://pcs.baidu.com/rest/2.0/pcs/manage?method=listhost').content
         serverlist = [server['host'] for server in json.loads(ret)['list']]
         url_pattern = 'http://{0}/monitor.jpg'
         time_record = []
         for server in serverlist:
-            start = time.time()*1000
+            start = time.time() * 1000
             requests.get(url_pattern.format(server))
-            end = time.time()*1000
-            time_record.append((end-start,server))
-            logging.info('TEST %s %s ms' % (server,int(end-start)))
+            end = time.time() * 1000
+            time_record.append((end - start, server))
+            logging.info('TEST %s %s ms' % (server, int(end - start)))
         return min(time_record)[1]
 
     def get_fastest_pcs_server(self):
@@ -142,7 +155,7 @@ class BaseClass(object):
         foo = json.loads(ret)
         return foo['host']
 
-    def set_pcs_server(self,server):
+    def set_pcs_server(self, server):
         """手动设置百度pcs服务器
         :params server: 服务器地址或域名
 
@@ -167,34 +180,36 @@ class BaseClass(object):
 
     def _save_cookies(self):
         cookies_file = '.{0}.cookies'.format(self.username)
-        with open(cookies_file,'w') as f:
-            pickle.dump(requests.utils.dict_from_cookiejar(self.session.cookies), f)
+        with open(cookies_file, 'w') as f:
+            pickle.dump(
+                requests.utils.dict_from_cookiejar(self.session.cookies), f)
 
     def _load_cookies(self):
         cookies_file = '.{0}.cookies'.format(self.username)
         logging.debug('cookies file:' + cookies_file)
         if os.path.exists(cookies_file):
-            logging.debug('%s cookies file has already existed.' % self.username)
+            logging.debug('%s cookies file has already existed.' %
+                          self.username)
             with open(cookies_file) as cookies_file:
-                cookies = requests.utils.cookiejar_from_dict(pickle.load(cookies_file))
+                cookies = requests.utils.cookiejar_from_dict(
+                    pickle.load(cookies_file))
                 logging.debug(str(cookies))
                 self.session.cookies = cookies
                 self.user['BDUSS'] = self.session.cookies['BDUSS']
                 return True
         else:
             return False
+
     def _get_token(self):
-        #Token
-        ret = self.session.get('https://passport.baidu.com/v2/api/?getapi&tpl=mn&apiver=v3&class=login&tt=%s&logintype=dialogLogin&callback=0' % int(time.time())).text.replace('\'','\"')
+        # Token
+        ret = self.session.get(
+            'https://passport.baidu.com/v2/api/?getapi&tpl=mn&apiver=v3&class=login&tt=%s&logintype=dialogLogin&callback=0' % int(time.time())).text.replace('\'', '\"')
         foo = json.loads(ret)
         logging.info('token %s' % foo['data']['token'])
         return foo['data']['token']
 
-    def _get_captcha(self):
-        #Captcha
-        ret = self.session.get('https://passport.baidu.com/v2/api/?logincheck&token=%s&tpl=mn&apiver=v3&tt=%s&username=%s&isphone=false&callback=0' % (self.user['token'], int(time.time()), self.username)).text.replace('\'','\"')
-        foo = json.loads(ret)
-        code_string = foo['data']['codeString']
+    def _get_captcha(self, code_string):
+        # Captcha
         if code_string:
             logging.debug("requiring captcha")
             url = "https://passport.baidu.com/cgi-bin/genimage?" + code_string
@@ -202,14 +217,14 @@ class BaseClass(object):
             verifycode = self.captcha_func(jpeg)
         else:
             verifycode = ""
-        return (code_string,verifycode)
+        return verifycode
 
     def show_captcha(self, jpeg):
         import captcha
         captcha.show(jpeg)
         verifycode = raw_input('captcha > ')
         return verifycode
-        
+
     def _get_publickey(self):
         url = 'https://passport.baidu.com/v2/getpublickey?token=' + \
             self.user['token']
@@ -219,37 +234,48 @@ class BaseClass(object):
 
     def _login(self):
         # Login
-        code_string, captcha = self._get_captcha()
-
+        #code_string, captcha = self._get_captcha()
+        captcha = ''
+        code_string = ''
         pubkey, rsakey = self._get_publickey()
         key = rsa.PublicKey.load_pkcs1_openssl_pem(pubkey)
         password_rsaed = base64.b64encode(rsa.encrypt(self.password, key))
+        while True:
+            login_data = {'staticpage': 'http://www.baidu.com/cache/user/html/v3Jump.html',
+                          'charset': 'UTF-8',
+                          'token': self.user['token'],
+                          'tpl': 'pp',
+                          'subpro': '',
+                          'apiver': 'v3',
+                          'tt': str(int(time.time())),
+                          'codestring': code_string,
+                          'isPhone': 'false',
+                          'safeflg': '0',
+                          'u': 'https://passport.baidu.com/',
+                          'quick_user': '0',
+                          'logLoginType': 'pc_loginBasic',
+                          'loginmerge': 'true',
+                          'logintype': 'basicLogin',
+                          'username': self.username,
+                          'password': password_rsaed,
+                          'verifycode': captcha,
+                          'mem_pass': 'on',
+                          'rsakey': str(rsakey),
+                          'crypttype': 12,
+                          'ppui_logintime': '50918',
+                          'callback': 'parent.bd__pcbs__oa36qm'}
+            result = self.session.post(
+                'https://passport.baidu.com/v2/api/?login', data=login_data)
 
-        login_data = {'staticpage': 'http://www.baidu.com/cache/user/html/v3Jump.html',
-                      'charset': 'UTF-8',
-                      'token': self.user['token'],
-                      'tpl': 'pp',
-                      'subpro': '',
-                      'apiver': 'v3',
-                      'tt': str(int(time.time())),
-                      'codestring': code_string,
-                      'isPhone': 'false',
-                      'safeflg': '0',
-                      'u': 'https://passport.baidu.com/',
-                      'quick_user': '0',
-                      'logLoginType': 'pc_loginBasic',
-                      'loginmerge': 'true',
-                      'logintype': 'basicLogin',
-                      'username': self.username,
-                      'password': password_rsaed,
-                      'verifycode': captcha,
-                      'mem_pass': 'on',
-                      'rsakey': str(rsakey),
-                      'crypttype': 12,
-                      'ppui_logintime': '50918',
-                      'callback': 'parent.bd__pcbs__oa36qm'}
-        result = self.session.post(
-            'https://passport.baidu.com/v2/api/?login', data=login_data)
+            # 是否需要验证码
+            if 'err_no=257' in result.content:
+                code_string = re.findall('codeString=(.*?)&', result.content)[0]
+                logging.debug('need captcha, codeString=' + code_string)
+                captcha = self._get_captcha(code_string)
+                continue
+
+            break
+
         # check exception
         self._check_account_exception(result.content)
 
@@ -264,21 +290,36 @@ class BaseClass(object):
                      (self.username, self.user['BDUSS']))
         self._save_cookies()
 
-    def _check_account_exception(self,content):
-        err_id = re.findall('err_no=([\d]+)',content)[0]
+    def _check_account_exception(self, content):
+        err_id = re.findall('err_no=([\d]+)', content)[0]
 
         if err_id == '0':
             return
-        error_message = {'120019':'Login failed too many times recently, please login your account on BAIDU first.'}
+        error_message = {
+            '-1':'系统错误, 请稍后重试',
+            '1':'您输入的帐号格式不正确',
+            '3':'验证码不存在或已过期,请重新输入',
+            '4': '您输入的帐号或密码有误',
+            '5': '请在弹出的窗口操作,或重新登录',
+            '6':'验证码输入错误',
+            '16': '您的帐号因安全问题已被限制登录',
+            '257': '需要验证码',
+            '100005': '系统错误, 请稍后重试',
+            '120016': '未知错误 120016',
+            '120019': '近期登录次数过多, 请先通过 passport.baidu.com 解除锁定',
+            '120021': '登录失败,请在弹出的窗口操作,或重新登录',
+            '500010': '登录过于频繁,请24小时后再试',
+
+            '401007': '您的手机号关联了其他帐号，请选择登录'}
         try:
             msg = error_message[err_id]
         except:
             msg = 'unknown err_id=' + err_id
         raise LoginFailed(msg)
 
-    def _params_utf8(self,params):
-        for k,v in params.items():
-            if isinstance(v,unicode):
+    def _params_utf8(self, params):
+        for k, v in params.items():
+            if isinstance(v, unicode):
                 params[k] = v.encode('utf-8')
 
     @check_login
@@ -286,10 +327,10 @@ class BaseClass(object):
                  data=None, files=None, callback=None, **kwargs):
         params = {
             'method': method,
-            'app_id':"250528",
-            'BDUSS':self.user['BDUSS'],
-            't':str(int(time.time())),
-            'bdstoken':self.user['token']
+            'app_id': "250528",
+            'BDUSS': self.user['BDUSS'],
+            't': str(int(time.time())),
+            'bdstoken': self.user['token']
         }
         if extra_params:
             params.update(extra_params)
@@ -305,11 +346,11 @@ class BaseClass(object):
             else:
                 api = '%s?%s' % (url, urlencode(params))
 
-            #print params
+            # print params
             if data:
                 self._remove_empty_items(data)
                 response = self.session.post(api, data=data, verify=False,
-                                         **kwargs)
+                                             **kwargs)
             else:
                 self._remove_empty_items(files)
 
@@ -318,17 +359,21 @@ class BaseClass(object):
                     "Content-Type": body.content_type
                 }
 
-                response = self.session.post(api, data=body, verify=False,headers=headers,**kwargs)
+                response = self.session.post(
+                    api, data=body, verify=False, headers=headers, **kwargs)
         else:
             api = url
             if uri == 'filemanager' or uri == 'rapidupload' or uri == 'filemetas' or uri == 'precreate':
-                response = self.session.post(api, params=params, verify=False, **kwargs)
+                response = self.session.post(
+                    api, params=params, verify=False, **kwargs)
             else:
-                response = self.session.get(api, params=params, verify=False, **kwargs)
+                response = self.session.get(
+                    api, params=params, verify=False, **kwargs)
         return response
 
 
 class PCS(BaseClass):
+
     def __init__(self,  username, password, captcha_callback=None):
         """
         :param username: 百度网盘的用户名
@@ -343,8 +388,6 @@ class PCS(BaseClass):
         """
         super(PCS, self).__init__(username, password, api_template)
 
-
-
     def quota(self, **kwargs):
         """获得配额信息
         :return requests.Response
@@ -355,7 +398,6 @@ class PCS(BaseClass):
                 {"errno":0,"total":配额字节数,"used":已使用字节数,"request_id":请求识别号}
         """
         return self._request('quota', **kwargs)
-
 
     def upload(self, dir, file_handler, filename, ondup="newcopy", callback=None, **kwargs):
         """上传单个文件（<2G）.
@@ -397,15 +439,14 @@ class PCS(BaseClass):
 
         """
 
-
         params = {
             'dir': dir,
             'ondup': ondup,
-            'filename':filename
+            'filename': filename
         }
 
-        tmp_filename = ''.join(random.sample(string.ascii_letters,10))
-        files = {'file': (tmp_filename,file_handler)}
+        tmp_filename = ''.join(random.sample(string.ascii_letters, 10))
+        files = {'file': (tmp_filename, file_handler)}
 
         url = 'https://{0}/rest/2.0/pcs/file'.format(BAIDUPCS_SERVER)
         return self._request('file', 'upload', url=url, extra_params=params,
@@ -459,9 +500,9 @@ class PCS(BaseClass):
         params = {
             'type': 'tmpfile'
         }
-        files = {'file': (str(int(time.time())),file_handler)}
+        files = {'file': (str(int(time.time())), file_handler)}
         url = 'https://{0}/rest/2.0/pcs/file'.format(BAIDUPCS_SERVER)
-        return self._request('file', 'upload', url=url, extra_params=params,callback=callback,
+        return self._request('file', 'upload', url=url, extra_params=params, callback=callback,
                              files=files, **kwargs)
 
     def upload_superfile(self, remote_path, block_list, ondup="newcopy", **kwargs):
@@ -505,8 +546,9 @@ class PCS(BaseClass):
         url = 'https://{0}/rest/2.0/pcs/file'.format(BAIDUPCS_SERVER)
         return self._request('file', 'createsuperfile', url=url, extra_params=params,
                              data=data, **kwargs)
+
     def get_sign(self):
-        # referred:
+        # refered:
         # https://github.com/PeterDing/iScript/blob/master/pan.baidu.com.py
         url = 'http://pan.baidu.com/disk/home'
         r = self.session.get(url)
@@ -584,7 +626,7 @@ class PCS(BaseClass):
 
     def download(self, remote_path, **kwargs):
         """下载单个文件。
-        @Deprecated
+
         download 接口支持HTTP协议标准range定义，通过指定range的取值可以实现
         断点下载功能。 例如：如果在request消息中指定“Range: bytes=0-99”，
         那么响应消息中会返回该文件的前100个字节的内容；
@@ -637,7 +679,7 @@ class PCS(BaseClass):
         data = {
             'path': remote_path,
             'isdir': "1",
-            "size":"",
+            "size": "",
             "block_list": "[]"
         }
         # 奇怪的是创建新目录的method是post
@@ -694,7 +736,6 @@ class PCS(BaseClass):
         }
         return self._request('list', 'list', extra_params=params, **kwargs)
 
-
     def move(self, path_list, dest, **kwargs):
         """
         移动文件或文件夹
@@ -712,16 +753,17 @@ class PCS(BaseClass):
             else:
                 return os.path.basename(path)
         params = {
-            'opera':'move'
+            'opera': 'move'
         }
         data = {
             'filelist': json.dumps([{
-                        "path":path,
-                        "dest":dest,
-                        "newname":__path(path)} for path in path_list]),
+                "path": path,
+                "dest": dest,
+                "newname": __path(path)} for path in path_list]),
         }
         url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
         return self._request('filemanager', 'move', url=url, data=data, extra_params=params, **kwargs)
+
     def rename(self, rename_pair_list, **kwargs):
         """重命名
 
@@ -730,19 +772,19 @@ class PCS(BaseClass):
 
         """
         foo = []
-        for path,newname in rename_pair_list:
-            foo.append({'path':path,
-                        'newname':newname
-            })
+        for path, newname in rename_pair_list:
+            foo.append({'path': path,
+                        'newname': newname
+                        })
 
-        data = {'filelist':json.dumps(foo)}
+        data = {'filelist': json.dumps(foo)}
         params = {
-            'opera':'rename'
+            'opera': 'rename'
         }
 
         url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
-        print '请求url',url
-        logging.debug('rename '+str(data)+'URL:'+url)
+        print '请求url', url
+        logging.debug('rename ' + str(data) + 'URL:' + url)
         return self._request('filemanager', 'rename', url=url, data=data, extra_params=params, **kwargs)
 
     def copy(self, path_list, dest, **kwargs):
@@ -762,13 +804,13 @@ class PCS(BaseClass):
             else:
                 return os.path.basename(path)
         params = {
-            'opera':'copy'
+            'opera': 'copy'
         }
         data = {
             'filelist': json.dumps([{
-                        "path":path,
-                        "dest":dest,
-                        "newname":__path(path)} for path in path_list]),
+                "path": path,
+                "dest": dest,
+                "newname": __path(path)} for path in path_list]),
         }
         url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
         return self._request('filemanager', 'move', url=url, data=data, extra_params=params, **kwargs)
@@ -783,7 +825,7 @@ class PCS(BaseClass):
 
         """
         data = {
-                'filelist': json.dumps([path for path in path_list])
+            'filelist': json.dumps([path for path in path_list])
         }
         url = 'http://{0}/api/filemanager?opera=delete'.format(BAIDUPAN_SERVER)
         return self._request('filemanager', 'delete', url=url, data=data, **kwargs)
@@ -821,20 +863,19 @@ class PCS(BaseClass):
         """
         if pwd:
             data = {
-                    'fid_list': json.dumps([int(fid) for fid in file_ids]),
-                    'pwd': pwd,
-                    'schannel':4,
-                    'channel_list':json.dumps([])
+                'fid_list': json.dumps([int(fid) for fid in file_ids]),
+                'pwd': pwd,
+                'schannel': 4,
+                'channel_list': json.dumps([])
             }
         else:
             data = {
-                    'fid_list': json.dumps([int(fid) for fid in file_ids]),
-                    'schannel':0,
-                    'channel_list':json.dumps([])
+                'fid_list': json.dumps([int(fid) for fid in file_ids]),
+                'schannel': 0,
+                'channel_list': json.dumps([])
             }
         url = 'http://pan.baidu.com/share/set'
         return self._request('share/set', '', url=url, data=data, **kwargs)
-
 
     def list_streams(self, file_type, start=0, limit=1000, order='time', desc='1',
                      filter_path=None, **kwargs):
@@ -856,7 +897,7 @@ class PCS(BaseClass):
         """
         if file_type == 'doc':
             file_type = '4'
-        elif file_type  == 'video':
+        elif file_type == 'video':
             file_type = '1'
         elif file_type == 'image':
             file_type = '3'
@@ -894,7 +935,7 @@ class PCS(BaseClass):
 
         """
         data = {
-            'method':'add_task',
+            'method': 'add_task',
             'source_url': source_url,
             'save_path': remote_path,
         }
@@ -907,7 +948,7 @@ class PCS(BaseClass):
         info = metainfo['info']
         return sha1(bencode.bencode(info)).hexdigest()
 
-    def add_local_bt_task(self, torrent_path, save_path='/',selected_idx=0, **kwargs):
+    def add_local_bt_task(self, torrent_path, save_path='/', selected_idx=0, **kwargs):
         """
         添加本地BT任务
 
@@ -925,29 +966,29 @@ class PCS(BaseClass):
                 {"task_id":任务编号,"rapid_download":是否已经完成（急速下载）,"request_id":请求识别号}
 
         """
-        torrent_handler = open(torrent_path,'rb')
+        torrent_handler = open(torrent_path, 'rb')
 
         basename = os.path.basename(torrent_path)
-        with open(torrent_path,'rb') as foo:
+        with open(torrent_path, 'rb') as foo:
             torrent_sha1 = self._calc_torrent_sha1(foo.read())
 
         if selected_idx != 0:
-            selected_idx = ','.join(map(str,selected_idx))
+            selected_idx = ','.join(map(str, selected_idx))
 
         # 首先上传种子文件
         ret = self.upload('/', torrent_handler, basename).content
         remote_path = json.loads(ret)['path']
         logging.debug('REMOTE PATH:' + remote_path)
 
-        #开始下载
+        # 开始下载
         data = {
-            'method':'add_task',
-            'file_sha1':torrent_sha1,
+            'method': 'add_task',
+            'file_sha1': torrent_sha1,
             'save_path': save_path,
             'selected_idx': selected_idx,
             'task_from': '1',
             'source_path': remote_path,
-            'type': '2' # 2 is torrent file
+            'type': '2'  # 2 is torrent file
         }
         url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
         return self._request('create', 'add_task', url=url, data=data, **kwargs)
@@ -1040,7 +1081,7 @@ class PCS(BaseClass):
         foo = json.loads(ret)
         return foo['total']
 
-    def list_download_tasks(self, need_task_info="1", asc="0", start=0,create_time=None, limit=1000, status="255",source_url=None,remote_path=None, **kwargs):
+    def list_download_tasks(self, need_task_info="1", asc="0", start=0, create_time=None, limit=1000, status="255", source_url=None, remote_path=None, **kwargs):
         """查询离线下载任务ID列表及任务信息.
 
         :param need_task_info: 是否需要返回任务信息:
@@ -1130,9 +1171,9 @@ class PCS(BaseClass):
             'limit': limit,
             'status': status,
             'need_task_info': need_task_info,
-            'asc':asc,
-            'source_url':source_url,
-            'remote_path':remote_path,
+            'asc': asc,
+            'source_url': source_url,
+            'remote_path': remote_path,
             'create_time': create_time
 
         }
@@ -1158,7 +1199,7 @@ class PCS(BaseClass):
                              data=data, **kwargs)
 
     def list_recycle_bin(self, order="time", desc="1", start=0, limit=1000, page=1, **kwargs):
-        #Done
+        # Done
         """获取回收站中的文件及目录列表.
 
         :param start: 返回条目的起始值，缺省值为0
@@ -1171,15 +1212,14 @@ class PCS(BaseClass):
         params = {
             'start': start,
             'num': limit,
-            'dir':'/',
-            'order':order,
-            'desc':desc
+            'dir': '/',
+            'order': order,
+            'desc': desc
         }
         url = 'http://{0}/api/recycle/list'.format(BAIDUPAN_SERVER)
         return self._request('recycle', 'list', url=url, extra_params=params, **kwargs)
 
     def restore_recycle_bin(self, fs_ids, **kwargs):
-
         """批量还原文件或目录（非强一致接口，调用后请sleep1秒 ）.
 
         :param fs_ids: 所还原的文件或目录在 PCS 的临时唯一标识 ID 的列表。
@@ -1194,7 +1234,6 @@ class PCS(BaseClass):
         return self._request('recycle', 'restore', data=data, **kwargs)
 
     def clean_recycle_bin(self, **kwargs):
-
         """清空回收站.
 
         :return: requests.Response
@@ -1203,7 +1242,7 @@ class PCS(BaseClass):
         url = 'http://{0}/api/recycle/clear'.format(BAIDUPAN_SERVER)
         return self._request('recycle', 'clear', url=url, **kwargs)
 
-    def rapidupload(self,file_handler,path, **kwargs):
+    def rapidupload(self, file_handler, path, **kwargs):
         """秒传一个文件
 
         :param file_handler: 文件handler, e.g. open('file','rb')
@@ -1250,7 +1289,7 @@ class PCS(BaseClass):
 
 
         """
-        file_handler.seek(0,2)
+        file_handler.seek(0, 2)
         _BLOCK_SIZE = 2 ** 20
         content_length = file_handler.tell()
         file_handler.seek(0)
@@ -1270,14 +1309,14 @@ class PCS(BaseClass):
             content_crc32 = crc32(block, content_crc32).conjugate()
             content_md5.update(block)
 
-        data = {'path':path,
-                'content-length':content_length,
-                'content-md5':content_md5.hexdigest(),
-                'slice-md5':slice_md5,
-                'content-crc32':'%d' % (content_crc32.conjugate() & 0xFFFFFFFF)}
+        data = {'path': path,
+                'content-length': content_length,
+                'content-md5': content_md5.hexdigest(),
+                'slice-md5': slice_md5,
+                'content-crc32': '%d' % (content_crc32.conjugate() & 0xFFFFFFFF)}
         logging.debug('RAPIDUPLOAD DATA ' + str(data))
         #url = 'http://pan.baidu.com/api/rapidupload'
-        return self._request('rapidupload','rapidupload',data=data, **kwargs)
+        return self._request('rapidupload', 'rapidupload', data=data, **kwargs)
 
     def search(self, path, keyword, page=1, recursion=1, limit=1000, **kwargs):
         """搜索文件
@@ -1291,15 +1330,15 @@ class PCS(BaseClass):
         :return: requests.Repsonse
         返回结果和list_files一样结构
         """
-        params = {'dir':path,
-                  'recusion':recursion,
-                  'key':keyword,
-                  'page':page,
-                  'num':limit}
+        params = {'dir': path,
+                  'recusion': recursion,
+                  'key': keyword,
+                  'page': page,
+                  'num': limit}
 
         #url = 'http://pan.baidu.com/api/search'
 
-        return self._request('search','search',extra_params=params, **kwargs)
+        return self._request('search', 'search', extra_params=params, **kwargs)
 
     def thumbnail(self, path, height, width, quality=100, **kwargs):
         """获取文件缩略图
@@ -1314,16 +1353,16 @@ class PCS(BaseClass):
             .. note::
                 如果返回 HTTP 404 说明该文件不存在缩略图形式
         """
-        params = {'ec':1,
-                  'path':path,
-                  'quality':quality,
-                  'width':width,
-                  'height':height}
+        params = {'ec': 1,
+                  'path': path,
+                  'quality': quality,
+                  'width': width,
+                  'height': height}
 
         url = 'http://{0}/rest/2.0/pcs/thumbnail'.format(BAIDUPCS_SERVER)
-        return self._request('thumbnail','generate', url=url, extra_params=params, **kwargs)
+        return self._request('thumbnail', 'generate', url=url, extra_params=params, **kwargs)
 
-    def meta(self,file_list, **kwargs):
+    def meta(self, file_list, **kwargs):
         """获得文件(s)的metainfo
 
         :param file_list: 文件路径列表,如 ['/aaa.txt']
@@ -1388,11 +1427,11 @@ class PCS(BaseClass):
             }
 
         """
-        data = {'target':json.dumps(file_list)}
+        data = {'target': json.dumps(file_list)}
 
-        return self._request('filemetas?blocks=1','filemetas',data=data, **kwargs)
+        return self._request('filemetas?blocks=1', 'filemetas', data=data, **kwargs)
 
-    def check_file_blocks(self,path,size,block_list, **kwargs):
+    def check_file_blocks(self, path, size, block_list, **kwargs):
         """文件块检查
 
         :param path: 文件路径
@@ -1422,9 +1461,11 @@ class PCS(BaseClass):
 
         """
 
-        data = {'path':path,
-                'size':size,
-                'isdir':0,
-                'block_list':json.dumps(block_list)}
+        data = {'path': path,
+                'size': size,
+                'isdir': 0,
+                'block_list': json.dumps(block_list)}
 
-        return self._request('precreate','post',data=data, **kwargs)
+        return self._request('precreate', 'post', data=data, **kwargs)
+
+
