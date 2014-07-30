@@ -21,11 +21,11 @@ import rsa
 import urllib
 
 
-'''
+
 logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S')
-'''
+
 BAIDUPAN_SERVER = 'pan.baidu.com'
 BAIDUPCS_SERVER = 'pcs.baidu.com'
 
@@ -616,13 +616,12 @@ class PCS(BaseClass):
             "type": "dlink"
         }
         url = 'http://pan.baidu.com/api/download?bdstoken=%s&app_id=250528' % self.user['token']
-        content = self.session.post(url, data=data).content
-
+        content = self.session.post(url, data=data, allow_redirects=False).content
         ret_jdata = json.loads(content)
         if ret_jdata['errno'] != 0:
             return
 
-        return [self.session.get(i['dlink']).url for i in json.loads(content)['dlink']]
+        return [self.session.head(i['dlink']).headers['location'] for i in json.loads(content)['dlink']]
 
     def download(self, remote_path, **kwargs):
         """下载单个文件。
@@ -1467,3 +1466,4 @@ class PCS(BaseClass):
                 'block_list': json.dumps(block_list)}
 
         return self._request('precreate', 'post', data=data, **kwargs)
+
