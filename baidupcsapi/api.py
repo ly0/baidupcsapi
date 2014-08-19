@@ -1194,7 +1194,7 @@ class PCS(BaseClass):
             'task_id': task_id,
         }
         url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
-        return self._request('services/cloud_dl', 'cancle_task',
+        return self._request('services/cloud_dl', 'cancel_task', url=url,
                              data=data, **kwargs)
 
     def list_recycle_bin(self, order="time", desc="1", start=0, limit=1000, page=1, **kwargs):
