@@ -17,6 +17,9 @@
 一个基于此api的 fuse（测试环境ubuntu12.04）
 http://github.com/ly0/baidu-fuse
 
+web版百度网盘(可以用来开放资源,测试环境ubuntu14.04)
+https://github.com/ly0/web.baidupan
+
 * 文档 http://baidupcsapi.rtfd.org
 * Free software: MIT license
 * PyPI: https://pypi.python.org/pypi/baidupcsapi
