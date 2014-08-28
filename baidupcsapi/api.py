@@ -92,6 +92,7 @@ class BufferReader(MultipartEncoder):
 
 def check_login(func):
     """检查用户登录状态
+    这是pcs的检查方法
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -667,7 +668,7 @@ class PCS(BaseClass):
             "type": "dlink"
         }
         url = 'http://pan.baidu.com/api/download?bdstoken=%s&app_id=250528' % self.user['token']
-        content = self.session.get(url, data=data, headers=BAIDUPAN_HEADERS, allow_redirects=False).content
+        content = self.session.post(url, data=data, headers=BAIDUPAN_HEADERS).content
         ret_jdata = json.loads(content)
 
         if ret_jdata['errno'] != 0:
