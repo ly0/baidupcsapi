@@ -1468,7 +1468,7 @@ class PCS(BaseClass):
         """
         data = {'target': json.dumps(file_list)}
 
-        return self._request('filemetas?blocks=1', 'filemetas', data=data, **kwargs)
+        return self._request('filemetas?blocks=0&dlink=1', 'filemetas', data=data, **kwargs)
 
     def check_file_blocks(self, path, size, block_list, **kwargs):
         """文件块检查
