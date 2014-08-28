@@ -29,6 +29,8 @@ logging.basicConfig(level=logging.DEBUG,
 
 BAIDUPAN_SERVER = 'pan.baidu.com'
 BAIDUPCS_SERVER = 'pcs.baidu.com'
+BAIDUPAN_HEADERS = {"Referer": "http://pan.baidu.com/disk/home",
+                    "User-Agent": "Mozilla/5.0"}
 
 # https://pcs.baidu.com/rest/2.0/pcs/manage?method=listhost -> baidu cdn
 # uses CDN_DOMAIN/monitor.jpg to test speed for each CDN
@@ -337,6 +339,11 @@ class BaseClass(object):
             params.update(extra_params)
             self._remove_empty_items(params)
 
+        headers = BAIDUPAN_HEADERS
+        if 'headers' in kwargs:
+            headers.update(kwargs['headers'])
+            kwargs.pop('headers')
+
         self._params_utf8(params)
         if not url:
             url = self.api_template.format(uri)
@@ -351,14 +358,15 @@ class BaseClass(object):
             if data:
                 self._remove_empty_items(data)
                 response = self.session.post(api, data=data, verify=False,
-                                             **kwargs)
+                                             headers=headers, **kwargs)
             else:
                 self._remove_empty_items(files)
 
                 body = BufferReader(files, callback=callback)
-                headers = {
+                headers.update({
                     "Content-Type": body.content_type
                 }
+                )
 
                 response = self.session.post(
                     api, data=body, verify=False, headers=headers, **kwargs)
@@ -366,10 +374,10 @@ class BaseClass(object):
             api = url
             if uri == 'filemanager' or uri == 'rapidupload' or uri == 'filemetas' or uri == 'precreate':
                 response = self.session.post(
-                    api, params=params, verify=False, **kwargs)
+                    api, params=params, verify=False, headers=headers, **kwargs)
             else:
                 response = self.session.get(
-                    api, params=params, verify=False, **kwargs)
+                    api, params=params, verify=False, headers=headers, **kwargs)
         return response
 
 
@@ -659,7 +667,7 @@ class PCS(BaseClass):
             "type": "dlink"
         }
         url = 'http://pan.baidu.com/api/download?bdstoken=%s&app_id=250528' % self.user['token']
-        content = self.session.post(url, data=data, allow_redirects=False).content
+        content = self.session.get(url, data=data, headers=BAIDUPAN_HEADERS, allow_redirects=False).content
         ret_jdata = json.loads(content)
 
         if ret_jdata['errno'] != 0:
@@ -668,7 +676,7 @@ class PCS(BaseClass):
                                       args=(remote_path,),
                                       kwargs=kwargs)
 
-        return [self.session.head(i['dlink']).headers['location'] for i in json.loads(content)['dlink']]
+        return [self.session.head(i['dlink'], headers=BAIDUPAN_HEADERS).headers['location'] for i in json.loads(content)['dlink']]
 
     def download(self, remote_path, **kwargs):
         """下载单个文件。
