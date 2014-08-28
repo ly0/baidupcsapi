@@ -386,7 +386,46 @@ class PCS(BaseClass):
             .. note::
                 该函数会获得一个jpeg文件的内容，返回值需为验证码
         """
-        super(PCS, self).__init__(username, password, api_template)
+        super(PCS, self).__init__(username, password, api_template, captcha_func=captcha_callback)
+
+    def __err_handler(self, act, errno, callback=None, args=(), kwargs={}):
+        """百度网盘下载错误控制
+        :param act: 出错时的行为, 有 download
+        :param errno: 出错时的errno,这个要配合act才有实际意义
+        :param callback: 返回时的调用函数, 为空时返回None
+        :param args: 给callback函数的参数tuple
+        :param kwargs: 给callback函数的带名参数字典
+
+        在本函数调用后一定可以解决提交过来的问题, 在外部不需要重复检查是否存在原问题
+        """
+        errno = int(errno)
+
+        def err_handler_download():
+            if errno == 112:
+                # 页面失效, 重新刷新页面
+                url = 'http://pan.baidu.com/disk/home'
+                self.session.get(url)
+
+            return
+
+        def err_handler_upload():
+            # 实际出问题了再写
+            return
+
+        def err_handler_generic():
+            return
+
+        _act = {'download': err_handler_download,
+                'upload': err_handler_upload,
+                'generic': err_handler_generic
+                }
+
+        if act not in _act:
+            raise Exception('行为未定义, 无法处理该行为的错误')
+
+        if callback:
+            return callback(*args, **kwargs)
+        return None
 
     def quota(self, **kwargs):
         """获得配额信息
@@ -604,7 +643,10 @@ class PCS(BaseClass):
         file_list = []
         jdata = json.loads(self.meta(remote_path).content)
         if jdata['errno'] != 0:
-            return None
+            jdata = self.__err_handler('generic', jdata['errno'],
+                                       self.meta,
+                                       args=(remote_path,)
+                                       )
 
         for entry in jdata['info']:
             file_list.append(entry['fs_id'])
@@ -618,8 +660,12 @@ class PCS(BaseClass):
         url = 'http://pan.baidu.com/api/download?bdstoken=%s&app_id=250528' % self.user['token']
         content = self.session.post(url, data=data, allow_redirects=False).content
         ret_jdata = json.loads(content)
+
         if ret_jdata['errno'] != 0:
-            return
+            return self.__err_handler('download', ret_jdata['errno'],
+                                      self.download_url,
+                                      args=(remote_path,),
+                                      kwargs=kwargs)
 
         return [self.session.head(i['dlink']).headers['location'] for i in json.loads(content)['dlink']]
 
