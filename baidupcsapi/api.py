@@ -30,7 +30,7 @@ logging.basicConfig(level=logging.DEBUG,
 BAIDUPAN_SERVER = 'pan.baidu.com'
 BAIDUPCS_SERVER = 'pcs.baidu.com'
 BAIDUPAN_HEADERS = {"Referer": "http://pan.baidu.com/disk/home",
-                    "User-Agent": "Mozilla/5.0"}
+                    "User-Agent": "netdisk;4.4.0.6;PC;PC-Windows;6.2.9200;WindowsBaiduYunGuanJia"}
 
 # https://pcs.baidu.com/rest/2.0/pcs/manage?method=listhost -> baidu cdn
 # uses CDN_DOMAIN/monitor.jpg to test speed for each CDN
@@ -659,25 +659,9 @@ class PCS(BaseClass):
                                        )
 
         for entry in jdata['info']:
-            file_list.append(entry['fs_id'])
+            file_list.append(entry['dlink'])
 
-        data = {
-            "sign": self.dsign,
-            "timestamp": self.timestamp,
-            "fidlist": json.dumps(file_list),
-            "type": "dlink"
-        }
-        url = 'http://pan.baidu.com/api/download?bdstoken=%s&app_id=250528' % self.user['token']
-        content = self.session.post(url, data=data, headers=BAIDUPAN_HEADERS).content
-        ret_jdata = json.loads(content)
-
-        if ret_jdata['errno'] != 0:
-            return self.__err_handler('download', ret_jdata['errno'],
-                                      self.download_url,
-                                      args=(remote_path,),
-                                      kwargs=kwargs)
-
-        return [self.session.head(i['dlink'], headers=BAIDUPAN_HEADERS).headers['location'] for i in json.loads(content)['dlink']]
+        return [self.session.get(i, stream=True, headers=BAIDUPAN_HEADERS).url for i in file_list]
 
     def download(self, remote_path, **kwargs):
         """下载单个文件。
