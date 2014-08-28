@@ -1,6 +1,9 @@
 #!/usr/bin/python2
 # -*- coding: utf-8 -*-
-import Image
+try:
+    from PIL import Image
+except:
+    import Image
 import sys
 from cStringIO import StringIO
 import time
