@@ -695,6 +695,36 @@ class PCS(BaseClass):
         return self._request('file', 'download', url=url,
                              extra_params=params, **kwargs)
 
+    def get_streaming(self, path, stype="M3U8_AUTO_480", **kwargs):
+        """获得视频的m3u8列表
+        :param path: 视频文件路径
+        :param type: 返回stream类型, 已知有M3U8_AUTO_240 M3U8_AUTO_480 M3U8_AUTO_720
+        """
+
+        params = {
+            'path': path,
+            'type': stype
+        }
+        url = 'https://{0}/rest/2.0/pcs/file'.format(BAIDUPCS_SERVER)
+        while True:
+            ret = self._request('file', 'streaming', url=url, extra_params=params, **kwargs)
+            if not ret.ok:
+                logging.debug('get_streaming ret_status_code %s' % ret.status_code)
+                jdata = json.loads(ret.content)
+                if jdata['error_code'] == 31345:
+                    # 再试一次
+                    continue
+                elif jdata['error_code'] == 31066:
+                    # 文件不存在
+                    return 31066
+                elif jdata['error_code'] == 31304:
+                    # 文件类型不支持
+                    return 31304
+                elif jdata['error_code'] == 31023:
+                    # params error
+                    return 31023
+            return ret.content
+ 
     def mkdir(self, remote_path, **kwargs):
         """为当前用户创建一个目录.
 
