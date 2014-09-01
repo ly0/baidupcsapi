@@ -393,6 +393,7 @@ class PCS(BaseClass):
         :type password: str
 
         :param captcha_callback: 验证码的回调函数
+        
             .. note::
                 该函数会获得一个jpeg文件的内容，返回值需为验证码
         """
@@ -641,8 +642,14 @@ class PCS(BaseClass):
 
     def download_url(self, remote_path, **kwargs):
         """返回目标文件可用的下载地址
+
         :param remote_path: 每一项代表需要下载的文件路径
         :type remote_path: str list
+
+        :return: list, 每一项对应一个真实地址
+
+            .. warning::
+                使用该方法返回的地址下载需要加HTTP头 user-agent: WindowsBaiduYunGuanJia 或者 user-agent: Mozilla/5.0 referer:http://pan.baidu.com/disk/home
         """
         if not hasattr(self, 'dsign'):
             self.get_sign()
@@ -697,8 +704,13 @@ class PCS(BaseClass):
 
     def get_streaming(self, path, stype="M3U8_AUTO_480", **kwargs):
         """获得视频的m3u8列表
+
         :param path: 视频文件路径
-        :param type: 返回stream类型, 已知有M3U8_AUTO_240 M3U8_AUTO_480 M3U8_AUTO_720
+        :param type: 返回stream类型, 已知有``M3U8_AUTO_240``/``M3U8_AUTO_480``/``M3U8_AUTO_720``
+
+            .. warning::
+                M3U8_AUTO_240会有问题, 目前480P是最稳定的, 也是百度网盘默认的
+        :return: str 播放(列表)需要的信息
         """
 
         params = {
@@ -1065,6 +1077,8 @@ class PCS(BaseClass):
     def get_remote_file_info(self, remote_path, type='2', **kwargs):
         """获得百度网盘里种子的信息
 
+        :param remote_path: 种子文件在网盘里的绝对路径
+        :type remote_path: str
         :return: requests.Response
         """
         params = {

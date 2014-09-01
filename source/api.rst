@@ -15,12 +15,6 @@ PCS类
 .. autoclass:: baidupcsapi.PCS
 .. automethod:: baidupcsapi.PCS.__init__
 
-连接设置
-~~~~~~~~
-.. automethod:: baidupcsapi.PCS.get_fastest_pcs_server_test
-.. automethod:: baidupcsapi.PCS.get_fastest_pcs_server
-.. automethod:: baidupcsapi.PCS.set_pcs_server
-
 空间配额信息
 ~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.quota
@@ -101,6 +95,10 @@ PCS类
 ~~~~~~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.list_streams
 
+获得流式文件播放地址
+~~~~~~~~~~~~~~~~~
+.. automethod:: baidupcsapi.PCS.get_streaming
+
 下载流式文件
 ~~~~~~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.download
@@ -138,6 +136,10 @@ PCS类
 ~~~~~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.cancel_download_task
 
+获得百度网盘里种子信息
+~~~~~~~~~~~~~~~~
+.. automethod:: baidupcsapi.PCS.get_remote_file_info
+
 
 
 回收站
@@ -154,5 +156,6 @@ PCS类
 清空回收站
 ~~~~~~~~~~~~~~~~
 .. automethod:: baidupcsapi.PCS.clean_recycle_bin
+
 
 

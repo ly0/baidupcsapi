@@ -2,15 +2,29 @@
 百度网盘API文档
 =======================================
 
+本项目一些范例
+------------
+这些范例仅供参考使用, 代码糟糕, BUG未调.
+全都是MIT协议的, 可以用各种姿势使用和娱乐.
+
+基于百度网盘的FUSE
+
+https://github.com/ly0/baidu-fuse/
+
+百度网盘的web portal
+
+https://github.com/ly0/web.baidupan/
 
 写在前面
 ------------
-就一个破脚本实在没什么可以写的，实在不会欢迎直接邮件问我
-yours086 # gmail.com
+有些接口由于百度的原因导致不可用, 请在本项目的github中提出.
+很多接口没有给出返回的范例, 还是自己尝试一下返回的结果吧.
+
+http://github.com/ly0/baidupcsapi
 
 基于 mozillazg 的 baidu-pcs-python-sdk 改写而成
 
-Github:https://github.com/mozillazg/baidu-pcs-python-sdk
+ref:https://github.com/mozillazg/baidu-pcs-python-sdk
 
 安装
 ------------

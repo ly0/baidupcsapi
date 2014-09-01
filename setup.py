@@ -12,6 +12,7 @@ from setuptools import setup
 requirements = [
     'requests>=1.1.0',
     'requests_toolbelt>=0.1.2',
+    'rsa>=3.1.4'
 ]
 packages = [
     'baidupcsapi',
@@ -27,7 +28,7 @@ setup(
     url='https://github.com/ly0/baidupcsapi',
     download_url='https://github.com/ly0/baidupcsapi',
     author=__author__,
-    author_email='mozillazg101@gmail.com,li@ds2k8.com',
+    author_email='mozillazg101@gmail.com,latysa@gmail.com',
     license=__license__,
     packages=packages,
     package_data={'': ['LICENSE.txt']},

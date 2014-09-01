@@ -6,7 +6,6 @@ requirements.txt
 setup.py
 baidupcsapi/BTL.py
 baidupcsapi/__init__.py
-baidupcsapi/api (copy).py
 baidupcsapi/api.py
 baidupcsapi/bencode.py
 baidupcsapi/captcha.py
