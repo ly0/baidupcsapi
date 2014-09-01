@@ -12,7 +12,8 @@
 正文
 ======================
 
-百度网盘现在不开放PCS API，所以目前只能用百度自己的API
+~~百度网盘现在不开放PCS API，所以目前只能用百度自己的API~~
+应该是可以了,参考 (https://github.com/mozillazg/baidu-pcs-python-sdk/wiki/%E5%A6%82%E4%BD%95%E8%8E%B7%E5%8F%96-Access-Token-%E5%92%8C-Refresh-Token%EF%BC%9F)
 
 一个基于此api的 fuse（测试环境ubuntu12.04）
 http://github.com/ly0/baidu-fuse
