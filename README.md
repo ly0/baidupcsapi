@@ -1,6 +1,10 @@
 百度网盘API
 ====================================
 
+文档
+-----------
+http://ly0.github.io/baidupcsapi
+
 随时更新处
 -----------
 
@@ -21,7 +25,7 @@ http://github.com/ly0/baidu-fuse
 web版百度网盘(可以用来开放资源,测试环境ubuntu14.04)
 https://github.com/ly0/web.baidupan
 
-* 文档 http://baidupcsapi.rtfd.org
+* 文档 http://ly0.github.io/baidupcsapi
 * Free software: MIT license
 * PyPI: https://pypi.python.org/pypi/baidupcsapi
 * Python version: 2.7
