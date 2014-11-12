@@ -640,17 +640,34 @@ class PCS(BaseClass):
         self.dsign = sign2(sign3, sign1)
         self.timestamp = timestamp
 
+    def _locatedownload(self, remote_path, **kwargs):
+        """百度云管家获得方式
+        :param remote_path: 需要下载的文件路径
+        :type remote_path: str
+        """
+        params = {
+            'path': remote_path
+        }
+        url = 'https://{0}/rest/2.0/pcs/file'.format(BAIDUPCS_SERVER)
+        return self._request('file', 'locatedownload', url=url,
+                             extra_params=params, **kwargs)
+
+    def _yunguanjia_format(self, remote_path, **kwargs):
+        ret = self._locatedownload(remote_path, **kwargs).content
+        data = json.loads(ret)
+        return 'http://' + data['host'] + data['path']
+
     def download_url(self, remote_path, **kwargs):
         """返回目标文件可用的下载地址
-
         :param remote_path: 每一项代表需要下载的文件路径
         :type remote_path: str list
-
-        :return: list, 每一项对应一个真实地址
-
-            .. warning::
-                使用该方法返回的地址下载需要加HTTP头 user-agent: WindowsBaiduYunGuanJia 或者 user-agent: Mozilla/5.0 referer:http://pan.baidu.com/disk/home
         """
+
+        def get_url(dlink):
+            return self.session.get(dlink,
+                                    headers=BAIDUPAN_HEADERS,
+                                    stream=True).url
+
         if not hasattr(self, 'dsign'):
             self.get_sign()
 
@@ -664,12 +681,19 @@ class PCS(BaseClass):
                                        self.meta,
                                        args=(remote_path,)
                                        )
+        logging.debug('[*]' + str(jdata))
+        for i, entry in enumerate(jdata['info']):
+            url = entry['dlink']
+            foo = get_url(url)
+            if 'wenxintishi' in foo:
+                file_list.append(self._yunguanjia_format(remote_path[i]))
+            else:
+                file_list.append(entry['dlink'])
 
-        for entry in jdata['info']:
-            file_list.append(entry['dlink'])
+        return [get_url(i) if 'wenxintishi' not in get_url(i) else self._yunguanjia_format() for i in file_list]
 
-        return [self.session.get(i, stream=True, headers=BAIDUPAN_HEADERS).url for i in file_list]
-
+    # Deprecated
+    # using download_url to get real download url
     def download(self, remote_path, **kwargs):
         """下载单个文件。
 
@@ -701,6 +725,7 @@ class PCS(BaseClass):
         url = 'https://{0}/rest/2.0/pcs/file'.format(BAIDUPCS_SERVER)
         return self._request('file', 'download', url=url,
                              extra_params=params, **kwargs)
+
 
     def get_streaming(self, path, stype="M3U8_AUTO_480", **kwargs):
         """获得视频的m3u8列表
