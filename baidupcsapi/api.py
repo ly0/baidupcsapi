@@ -690,7 +690,7 @@ class PCS(BaseClass):
             else:
                 file_list.append(entry['dlink'])
 
-        return [get_url(i) if 'wenxintishi' not in get_url(i) else self._yunguanjia_format() for i in file_list]
+        return file_list
 
     # Deprecated
     # using download_url to get real download url
