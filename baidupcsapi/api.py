@@ -688,7 +688,7 @@ class PCS(BaseClass):
             if 'wenxintishi' in foo:
                 file_list.append(self._yunguanjia_format(remote_path[i]))
             else:
-                file_list.append(entry['dlink'])
+                file_list.append(get_url(entry['dlink']))
 
         return file_list
 
