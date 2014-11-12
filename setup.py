@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 __title__ = 'baidupcsapi'
-__version__ = '0.3.2'
-__author__ = 'mozillazg,liyangjie'
+__version__ = '0.3.3'
+__author__ = 'liyangjie,mozillazg'
 __license__ = 'MIT'
 
 from setuptools import setup
@@ -28,7 +28,7 @@ setup(
     url='https://github.com/ly0/baidupcsapi',
     download_url='https://github.com/ly0/baidupcsapi',
     author=__author__,
-    author_email='mozillazg101@gmail.com,latysa@gmail.com',
+    author_email='latyas@gmail.com,mozillazg101@gmail.com',
     license=__license__,
     packages=packages,
     package_data={'': ['LICENSE.txt']},
