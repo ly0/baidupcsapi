@@ -1535,6 +1535,8 @@ class PCS(BaseClass):
             }
 
         """
+        if not isinstance(file_list, list):
+            file_list = [file_list]
         data = {'target': json.dumps(file_list)}
 
         return self._request('filemetas?blocks=0&dlink=1', 'filemetas', data=data, **kwargs)
