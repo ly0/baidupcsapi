@@ -340,7 +340,7 @@ class BaseClass(object):
             params.update(extra_params)
             self._remove_empty_items(params)
 
-        headers = BAIDUPAN_HEADERS
+        headers = dict(BAIDUPAN_HEADERS)
         if 'headers' in kwargs:
             headers.update(kwargs['headers'])
             kwargs.pop('headers')
