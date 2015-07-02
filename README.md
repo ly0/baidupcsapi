@@ -7,7 +7,7 @@
 
 文档
 -----------
-http://ly0.github.io/baidupcsapi
+http://baidupcsapi.readthedocs.org/
 
 随时更新处
 -----------
