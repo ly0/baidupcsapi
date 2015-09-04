@@ -1028,16 +1028,36 @@ class PCS(BaseClass):
         url = 'http://pan.baidu.com/api/categorylist'
         return self._request('categorylist', 'list', url=url, extra_params=params,
                              **kwargs)
+    
+    def query_magnet_info(self, magnet, **kwargs):
+        """
+        查询magnet链接对应的种子内的信息
 
-    def add_download_task(self, source_url, remote_path, **kwargs):
+        :param magnet: Magnet 链接地址
+
+        """
+
+        data = {
+            'method': 'query_magnetinfo',
+            'source_url': magnet,
+        }
+
+        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
+        return self._request('services/cloud_dl', 'query_magnetinfo', url=url,
+                             data=data, **kwargs)
+        
+    def add_download_task(self, source_url, remote_path, selected_idx=None, **kwargs):
         """
         添加离线任务
 
         :param source_url: 下载的地址,不可以是 magnet 协议
+        :param remote_path: 保存到的远程地址
+        :param selected_idx: 如果是种子或者 magnet 协议地址，选择需要下载的哪一项 
 
             .. note::
-                需要支持 ``magnet`` 地址可以在本地使用 ``magnet`` 地址生成种子文件后调用 **add_local_bt_task**
+                selected_idx 范例: [1,2,3,4,5,6,9,10,12], 需要获取种子内的文件可以先调用 query_magnet_info 接口
         :type source_url: str
+        :type selected_idx: list
 
         """
         data = {
@@ -1045,6 +1065,11 @@ class PCS(BaseClass):
             'source_url': source_url,
             'save_path': remote_path,
         }
+
+        if selected_idx:
+            assert isinstance(selected_idx, list)
+            data['selected_idx'] = ','.join(selected_idx)
+
         url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
         return self._request('services/cloud_dl', 'add_task', url=url,
                              data=data, **kwargs)
