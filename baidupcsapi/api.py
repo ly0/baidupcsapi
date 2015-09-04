@@ -215,19 +215,17 @@ class BaseClass(object):
     def _get_captcha(self, code_string):
         # Captcha
         if code_string:
-            logging.debug("requiring captcha")
-            url = "https://passport.baidu.com/cgi-bin/genimage?" + code_string
-            jpeg = self.session.get(url).content
-            verifycode = self.captcha_func(jpeg)
+            verify_code = self.captcha_func("https://passport.baidu.com/cgi-bin/genimage?" + code_string)
         else:
-            verifycode = ""
-        return verifycode
+            verify_code = ""
 
-    def show_captcha(self, jpeg):
-        import captcha
-        captcha.show(jpeg)
-        verifycode = raw_input('captcha > ')
-        return verifycode
+        return verify_code
+
+    def show_captcha(self, url_verify_code):
+        print(url_verify_code)
+        verify_code = raw_input('open url aboved with your web browser, then input verify code > ')
+
+        return verify_code
 
     def _get_publickey(self):
         url = 'https://passport.baidu.com/v2/getpublickey?token=' + \

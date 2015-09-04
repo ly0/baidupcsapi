@@ -1,0 +1,16 @@
+.idea
+*.zip
+*.rar
+*.via
+*.tmp
+*.err
+*.pyc
+*.swp
+*#
+.DS_Store
+.svn
+env
+gitignore
+nginx.conf
+supervisord.conf
+pycharm-debug.egg

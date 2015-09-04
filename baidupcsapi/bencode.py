@@ -10,7 +10,9 @@
 
 # Written by Petru Paler
 
-from BTL import BTFailure
+
+class BTFailure(Exception):
+    pass
 
 
 def decode_int(x, f):
