@@ -1071,15 +1071,18 @@ class PCS(BaseClass):
         torrent_handler = open(torrent_path, 'rb')
         basename = os.path.basename(torrent_path)
 
-        ret = self.upload('/', torrent_handler, basename).content
-        remote_path = json.loads(ret)['path']
+        # 清理同名文件
+        self.delete(['/' + basename])
+
+        response = self.upload('/', torrent_handler, basename).json()
+        remote_path = response['path']
         logging.debug('REMOTE PATH:' + remote_path)
 
         # 获取种子信息
         response = self._get_torrent_info(remote_path).json()
         if response.get('error_code'):
-	        print(response.get('error_code'))
-	        return
+            print(response.get('error_code'))
+            return
         if not response['torrent_info']['file_info']:
             return
 
@@ -1088,13 +1091,12 @@ class PCS(BaseClass):
             if len(selected_idx) > 0:
                 selected_idx = ','.join(map(str, selected_idx))
             else:
-                selected_idx = ','.join(map(str, range(0, len(response['torrent_info']['file_info']))))
+                selected_idx = ','.join(map(str, range(1, len(response['torrent_info']['file_info']) + 1)))
         else:
             selected_idx = ''
 
         # 开始下载
         data = {
-            'method': 'add_task',
             'file_sha1': response['torrent_info']['sha1'],
             'save_path': save_path,
             'selected_idx': selected_idx,
@@ -1107,19 +1109,18 @@ class PCS(BaseClass):
 
     def _get_torrent_info(self, torrent_path):
         data = {
-            'method': 'query_sinfo',
             'source_path': torrent_path,
             'type': '2'  # 2 is torrent
         }
         url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
 
-        return self._request('', '', url=url, data=data, timeout=30)
+        return self._request('cloud_dl', 'query_sinfo', url=url, data=data, timeout=30)
 
     def add_magnet_task(self, magnet, remote_path, selected_idx=(), **kwargs):
         response = self._get_magnet_info(magnet).json()
         if response.get('error_code'):
-	        print(response.get('error_code'))
-	        return
+            print(response.get('error_code'))
+            return
         if not response['magnet_info']:
             return
 
@@ -1128,12 +1129,11 @@ class PCS(BaseClass):
             if len(selected_idx) > 0:
                 selected_idx = ','.join(map(str, selected_idx))
             else:
-                selected_idx = ','.join(map(str, range(0, len(response['magnet_info']))))
+                selected_idx = ','.join(map(str, range(1, len(response['magnet_info']) + 1)))
         else:
             selected_idx = ''
 
         data = {
-            'method': 'add_task',
             'source_url': magnet,
             'save_path': remote_path,
             'selected_idx': selected_idx,
@@ -1142,32 +1142,17 @@ class PCS(BaseClass):
         }
         url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
 
-        return self._request('', '', url=url, data=data, timeout=30)
+        return self._request('create', 'add_task', url=url, data=data, timeout=30)
 
     def _get_magnet_info(self, magnet):
         data = {
-            'method': 'query_magnetinfo',
             'source_url': magnet,
             'save_path': '/',
             'type': '4'  # 4 is magnet
         }
         url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
 
-        return self._request('', '', url=url, data=data, timeout=30)
-
-    def get_remote_file_info(self, remote_path, type='2', **kwargs):
-        """获得百度网盘里种子的信息
-
-        :param remote_path: 种子文件在网盘里的绝对路径
-        :type remote_path: str
-        :return: requests.Response
-        """
-        params = {
-            'type': type,
-            'source_path': remote_path
-        }
-        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
-        return self._request('cloud_dl', 'query_sinfo', url=url, extra_params=params, **kwargs)
+        return self._request('cloud_dl', 'query_magnetinfo', url=url, data=data, timeout=30)
 
     def query_download_tasks(self, task_ids, operate_type=1, **kwargs):
         """根据任务ID号，查询离线下载任务信息及进度信息。
