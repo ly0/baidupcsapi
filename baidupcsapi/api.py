@@ -16,7 +16,7 @@ from urllib import urlencode, quote
 from zlib import crc32
 from requests_toolbelt import MultipartEncoder
 import requests
-import bencode
+requests.packages.urllib3.disable_warnings()
 import rsa
 import urllib
 
@@ -30,7 +30,7 @@ logging.basicConfig(level=logging.DEBUG,
 BAIDUPAN_SERVER = 'pan.baidu.com'
 BAIDUPCS_SERVER = 'pcs.baidu.com'
 BAIDUPAN_HEADERS = {"Referer": "http://pan.baidu.com/disk/home",
-                    "User-Agent": "netdisk;4.4.0.6;PC;PC-Windows;6.2.9200;WindowsBaiduYunGuanJia"}
+                    "User-Agent": "netdisk;4.6.2.0;PC;PC-Windows;10.0.10240;WindowsBaiduYunGuanJia"}
 
 # https://pcs.baidu.com/rest/2.0/pcs/manage?method=listhost -> baidu cdn
 # uses CDN_DOMAIN/monitor.jpg to test speed for each CDN
@@ -215,19 +215,17 @@ class BaseClass(object):
     def _get_captcha(self, code_string):
         # Captcha
         if code_string:
-            logging.debug("requiring captcha")
-            url = "https://passport.baidu.com/cgi-bin/genimage?" + code_string
-            jpeg = self.session.get(url).content
-            verifycode = self.captcha_func(jpeg)
+            verify_code = self.captcha_func("https://passport.baidu.com/cgi-bin/genimage?" + code_string)
         else:
-            verifycode = ""
-        return verifycode
+            verify_code = ""
 
-    def show_captcha(self, jpeg):
-        import captcha
-        captcha.show(jpeg)
-        verifycode = raw_input('captcha > ')
-        return verifycode
+        return verify_code
+
+    def show_captcha(self, url_verify_code):
+        print(url_verify_code)
+        verify_code = raw_input('open url aboved with your web browser, then input verify code > ')
+
+        return verify_code
 
     def _get_publickey(self):
         url = 'https://passport.baidu.com/v2/getpublickey?token=' + \
@@ -1029,32 +1027,28 @@ class PCS(BaseClass):
         return self._request('categorylist', 'list', url=url, extra_params=params,
                              **kwargs)
 
-    def add_download_task(self, source_url, remote_path, **kwargs):
+    def add_download_task(self, source_url, remote_path, selected_idx=(), **kwargs):
         """
-        添加离线任务
-
-        :param source_url: 下载的地址,不可以是 magnet 协议
-
-            .. note::
-                需要支持 ``magnet`` 地址可以在本地使用 ``magnet`` 地址生成种子文件后调用 **add_local_bt_task**
-        :type source_url: str
-
+        添加离线任务，支持所有百度网盘支持的类型
         """
-        data = {
-            'method': 'add_task',
-            'source_url': source_url,
-            'save_path': remote_path,
-        }
-        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
-        return self._request('services/cloud_dl', 'add_task', url=url,
-                             data=data, **kwargs)
+        if source_url.startswith('magnet:?'):
+            print('Magnet: "%s"' % source_url)
+            return self.add_magnet_task(source_url, remote_path, selected_idx, **kwargs)
+        elif source_url.endswith('.torrent'):
+            print('BitTorrent: "%s"' % source_url)
+            return self.add_torrent_task(source_url, remote_path, selected_idx, **kwargs)
+        else:
+            print('Others: "%s"' % source_url)
+            data = {
+                'method': 'add_task',
+                'source_url': source_url,
+                'save_path': remote_path,
+            }
+            url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
+            return self._request('services/cloud_dl', 'add_task', url=url,
+                                 data=data, **kwargs)
 
-    def _calc_torrent_sha1(self, torrent_content):
-        metainfo = bencode.bdecode(torrent_content)
-        info = metainfo['info']
-        return sha1(bencode.bencode(info)).hexdigest()
-
-    def add_local_bt_task(self, torrent_path, save_path='/', selected_idx=0, **kwargs):
+    def add_torrent_task(self, torrent_path, save_path='/', selected_idx=(), **kwargs):
         """
         添加本地BT任务
 
@@ -1062,7 +1056,7 @@ class PCS(BaseClass):
 
         :param save_path: 远程保存路径
 
-        :param selected_idx: 要下载的文件序号，0为所有，默认为0
+        :param selected_idx: 要下载的文件序号 —— 集合为空下载所有，非空集合指定序号集合，空串下载默认
 
         :return: requests.Response
 
@@ -1072,24 +1066,38 @@ class PCS(BaseClass):
                 {"task_id":任务编号,"rapid_download":是否已经完成（急速下载）,"request_id":请求识别号}
 
         """
+
+        # 上传种子文件
         torrent_handler = open(torrent_path, 'rb')
-
         basename = os.path.basename(torrent_path)
-        with open(torrent_path, 'rb') as foo:
-            torrent_sha1 = self._calc_torrent_sha1(foo.read())
 
-        if selected_idx != 0:
-            selected_idx = ','.join(map(str, selected_idx))
+        # 清理同名文件
+        self.delete(['/' + basename])
 
-        # 首先上传种子文件
-        ret = self.upload('/', torrent_handler, basename).content
-        remote_path = json.loads(ret)['path']
+        response = self.upload('/', torrent_handler, basename).json()
+        remote_path = response['path']
         logging.debug('REMOTE PATH:' + remote_path)
+
+        # 获取种子信息
+        response = self._get_torrent_info(remote_path).json()
+        if response.get('error_code'):
+            print(response.get('error_code'))
+            return
+        if not response['torrent_info']['file_info']:
+            return
+
+        # 要下载的文件序号：集合为空下载所有，非空集合指定序号集合，空串下载默认
+        if isinstance(selected_idx, (tuple, list, set)):
+            if len(selected_idx) > 0:
+                selected_idx = ','.join(map(str, selected_idx))
+            else:
+                selected_idx = ','.join(map(str, range(1, len(response['torrent_info']['file_info']) + 1)))
+        else:
+            selected_idx = ''
 
         # 开始下载
         data = {
-            'method': 'add_task',
-            'file_sha1': torrent_sha1,
+            'file_sha1': response['torrent_info']['sha1'],
             'save_path': save_path,
             'selected_idx': selected_idx,
             'task_from': '1',
@@ -1099,19 +1107,52 @@ class PCS(BaseClass):
         url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
         return self._request('create', 'add_task', url=url, data=data, **kwargs)
 
-    def get_remote_file_info(self, remote_path, type='2', **kwargs):
-        """获得百度网盘里种子的信息
-
-        :param remote_path: 种子文件在网盘里的绝对路径
-        :type remote_path: str
-        :return: requests.Response
-        """
-        params = {
-            'type': type,
-            'source_path': remote_path
+    def _get_torrent_info(self, torrent_path):
+        data = {
+            'source_path': torrent_path,
+            'type': '2'  # 2 is torrent
         }
         url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
-        return self._request('cloud_dl', 'query_sinfo', url=url, extra_params=params, **kwargs)
+
+        return self._request('cloud_dl', 'query_sinfo', url=url, data=data, timeout=30)
+
+    def add_magnet_task(self, magnet, remote_path, selected_idx=(), **kwargs):
+        response = self._get_magnet_info(magnet).json()
+        if response.get('error_code'):
+            print(response.get('error_code'))
+            return
+        if not response['magnet_info']:
+            return
+
+        # 要下载的文件序号：集合为空下载所有，非空集合指定序号集合，空串下载默认
+        if isinstance(selected_idx, (tuple, list, set)):
+            if len(selected_idx) > 0:
+                selected_idx = ','.join(map(str, selected_idx))
+            else:
+                selected_idx = ','.join(map(str, range(1, len(response['magnet_info']) + 1)))
+        else:
+            selected_idx = ''
+
+        data = {
+            'source_url': magnet,
+            'save_path': remote_path,
+            'selected_idx': selected_idx,
+            'task_from': '1',
+            'type': '4'  # 4 is magnet
+        }
+        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
+
+        return self._request('create', 'add_task', url=url, data=data, timeout=30)
+
+    def _get_magnet_info(self, magnet):
+        data = {
+            'source_url': magnet,
+            'save_path': '/',
+            'type': '4'  # 4 is magnet
+        }
+        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
+
+        return self._request('cloud_dl', 'query_magnetinfo', url=url, data=data, timeout=30)
 
     def query_download_tasks(self, task_ids, operate_type=1, **kwargs):
         """根据任务ID号，查询离线下载任务信息及进度信息。
