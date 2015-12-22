@@ -601,9 +601,9 @@ class PCS(BaseClass):
         url = 'http://pan.baidu.com/disk/home'
         r = self.session.get(url)
         html = r.content
-        sign1 = re.search(r'sign1 = \'(.+?)\';', html).group(1)
-        sign3 = re.search(r'sign3 = \'(.+?)\';', html).group(1)
-        timestamp = re.search(r'timestamp = \'(.+?)\';', html).group(1)
+        sign1 = re.search(r'"sign1":"([A-Za-z0-9]+)"', html).group(1)
+        sign3 = re.search(r'"sign3":"([A-Za-z0-9]+)"', html).group(1)
+        timestamp = re.search(r'"timestamp":([0-9]+)[^0-9]', html).group(1)
 
         def sign2(j, r):
             a = []
