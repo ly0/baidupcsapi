@@ -1480,7 +1480,7 @@ class PCS(BaseClass):
         返回结果和list_files一样结构
         """
         params = {'dir': path,
-                  'recusion': recursion,
+                  'recursion': recursion,
                   'key': keyword,
                   'page': page,
                   'num': limit}
