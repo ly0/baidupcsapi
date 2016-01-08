@@ -97,7 +97,7 @@ def check_login(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         ret = func(*args, **kwargs)
-        if type(ret) == requests.Response and ret.headers.get('content-type', {}).startswith('application/json'):
+        if type(ret) == requests.Response and re.search('application/json|text/html', ret.headers.get('content-type', '')):
             try:
                 foo = json.loads(ret.content)
                 if foo.has_key('errno') and foo['errno'] == -6:
