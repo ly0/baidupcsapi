@@ -1377,7 +1377,7 @@ class PCS(BaseClass):
         """
 
         data = {
-            'filelist': json.dumps([fs_id for fs_id in fs_ids])
+            'fidlist': json.dumps(fs_ids)
         }
         url = 'http://{0}/api/recycle/restore'.format(BAIDUPAN_SERVER)
         return self._request('recycle', 'restore', data=data, **kwargs)
