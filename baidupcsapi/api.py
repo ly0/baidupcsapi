@@ -808,7 +808,9 @@ class PCS(BaseClass):
         }
         """
         # TODO 通过hash类型的url重定向到shareid=xxx的url从而获取shareid
-        target_url = url
+        respond = self._request(None, url=url)
+
+        target_url = respond.url
         shareid, uk = None, None
         m = re.search(r"shareid=(\d+)", target_url)
         if m:
