@@ -807,7 +807,6 @@ class PCS(BaseClass):
             "XDUSS": "null"
         }
         """
-        # TODO 通过hash类型的url重定向到shareid=xxx的url从而获取shareid
         respond = self._request(None, url=url)
 
         target_url = respond.url
