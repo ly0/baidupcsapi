@@ -807,6 +807,8 @@ class PCS(BaseClass):
             "XDUSS": "null"
         }
         """
+        # 这里无论是短链接还是长链接如果带密码, 则都被重定向到长链接, 可以直接取出shareid, uk
+        # 而如果是不带密码的分享, 则此时还不需要shareid,uk
         respond = self._request(None, url=url)
 
         target_url = respond.url
@@ -827,7 +829,7 @@ class PCS(BaseClass):
                     "error_msg": "PCS.save_share_list(), verify code error!"
                 }
 
-        # 从html中解析文件列表
+        # 从html中解析文件列表, 同时把shareid, uk也解析出来
         html = self._request(None, url=target_url).content
         r = re.compile(r".*_context =(.*);.*")
         m = r.search(html)
