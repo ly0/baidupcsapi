@@ -799,8 +799,8 @@ class PCS(BaseClass):
             "visitor_uk": null ,
             "visitor_avatar": null ,
             "timestamp": 1458198232,
-            "sign": "40398487e416230080a32ea607ac686f88bfab25",
-            "sekey": "nvIaITp2vb68JXUwMyQp4DmtFeLO8642",
+            "sign": "xxxx",
+            "sekey": "xxxx",
             "novelid": false,
             "is_master_vip": 0,
             "urlparam": [],
@@ -822,8 +822,10 @@ class PCS(BaseClass):
         if password:
             verify_result = self._verify_shared_file(shareid, uk, password)
             if not verify_result or verify_result['errno'] != 0:
-                print "PCS.get_shared_file_list(), verify code error!"
-                exit(-1)
+                return {
+                    "errno": verify_result['errno'] if verify_result else -1,
+                    "error_msg": "PCS.save_share_list(), verify code error!"
+                }
 
         # 从html中解析文件列表
         html = self._request(None, url=target_url).content
@@ -844,11 +846,11 @@ class PCS(BaseClass):
                 if not filter or filter(file_obj):
                     ret['filelist'].append(f['path'])
             ret['result'] = self._save_shared_file_list(shareid, uk, path, ret['filelist'])
+            ret['errno'] = 0
             return ret
         else:
             # 获取文件列表失败
-            print "get_share_filelist failed"
-            exit(-1)
+            return {"errno": -1, "error_msg": "PCS.save_share_list failed, mayby url is incorrect!"}
 
     # Deprecated
     # using download_url to get real download url
