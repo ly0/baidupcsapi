@@ -718,7 +718,7 @@ class PCS(BaseClass):
         }
         return json.loads(self._request(None, url=url, data=data).content)
 
-    def save_share_list(self, url, path, password=None, filter=None):
+    def save_share_list(self, url, path, password=None, filter_callback=None):
         """ 保存分享文件列表到自己的网盘, 支持密码, 支持文件过滤的回调函数
         :param url: 分享的url
         :type url: str
@@ -729,7 +729,7 @@ class PCS(BaseClass):
         :param password 分享密码, 如果没有分享资源没有密码则不用填
         :type password: str
 
-        :param filter 过滤文件列表中文件的回调函数, filter(file), 返回值是假值则被过滤掉
+        :param filter_callback 过滤文件列表中文件的回调函数, filter(file), 返回值是假值则被过滤掉
         file = {
             "filename": "xxx",
             "size": 1234,
@@ -843,7 +843,7 @@ class PCS(BaseClass):
                     'size': f['size'],
                     'isdir': f['isdir']
                 }
-                if not filter or filter(file_obj):
+                if not filter_callback or filter_callback(file_obj):
                     ret['filelist'].append(f['path'])
             ret['result'] = self._save_shared_file_list(shareid, uk, path, ret['filelist'])
             ret['errno'] = 0
