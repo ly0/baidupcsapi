@@ -849,9 +849,11 @@ class PCS(BaseClass):
                 }
                 if not filter_callback or filter_callback(file_obj):
                     ret['filelist'].append(f['path'])
-            ret['result'] = self._save_shared_file_list(shareid, uk, path, ret['filelist'])
-            ret['errno'] = 0
-            return ret
+            save_share_file_ret = self._save_shared_file_list(shareid, uk, path, ret['filelist'])
+            if save_share_file_ret and save_share_file_ret['errno'] == 0:
+                return save_share_file_ret
+            else:
+                return ret
         else:
             # 获取文件列表失败
             return {"errno": -1, "error_msg": "PCS.save_share_list failed, mayby url is incorrect!"}
