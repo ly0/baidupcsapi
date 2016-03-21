@@ -824,10 +824,7 @@ class PCS(BaseClass):
         if password:
             verify_result = self._verify_shared_file(shareid, uk, password)
             if not verify_result or verify_result['errno'] != 0:
-                return {
-                    "errno": verify_result['errno'] if verify_result else -1,
-                    "error_msg": "PCS.save_share_list(), verify code error!"
-                }
+                return verify_result
 
         # 从html中解析文件列表, 同时把shareid, uk也解析出来
         html = self._request(None, url=target_url).content
