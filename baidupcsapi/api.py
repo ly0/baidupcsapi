@@ -735,6 +735,11 @@ class PCS(BaseClass):
             "size": 1234,
             "isdir": 0
         }
+        :return
+        {
+            "error": 0, # 无错误为0, 否则出错.
+            "result": [] # 如果成功会返回添加到自己网盘的文件列表
+        }
 
         context是从分享页面的html中提取的json, 里面保存了分享文件列表
         暂时有用的是file_list, uk, shareid
