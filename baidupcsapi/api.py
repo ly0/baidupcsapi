@@ -690,6 +690,174 @@ class PCS(BaseClass):
 
         return file_list
 
+    def save_album_file(self, album_id, from_uk, save_path, fsid_list):
+        data = {
+            "from_uk": from_uk,
+            "album_id": album_id,
+            "to_path": save_path,
+            "fsid_list": fsid_list}
+        url = "http://pan.baidu.com/pcloud/album/transfertask/create"
+        print (self._request(None, data=data, url=url).content)
+
+    def _verify_shared_file(self, shareid, uk, password):
+        data = {
+            "pwd": password,
+            "vcode": "",
+            "vcode_str": "",
+            "shareid": shareid,
+            "uk": uk
+        }
+        url = "http://pan.baidu.com/share/verify?shareid="+shareid+"&uk="+uk
+        return json.loads(self._request(None, data=data, url=url).content)
+
+    def _save_shared_file_list(self, shareid, uk, path, file_list):
+        url = "http://pan.baidu.com/share/transfer?shareid="+shareid+"&from="+uk
+        data = {
+            "filelist": json.dumps(file_list),
+            "path": path
+        }
+        return json.loads(self._request(None, url=url, data=data).content)
+
+    def save_share_list(self, url, path, password=None, filter_callback=None):
+        """ 保存分享文件列表到自己的网盘, 支持密码, 支持文件过滤的回调函数
+        :param url: 分享的url
+        :type url: str
+
+        :param path 保存到自己网盘的位置
+        :type path: str
+
+        :param password 分享密码, 如果没有分享资源没有密码则不用填
+        :type password: str
+
+        :param filter_callback 过滤文件列表中文件的回调函数, filter(file), 返回值是假值则被过滤掉
+        file = {
+            "filename": "xxx",
+            "size": 1234,
+            "isdir": 0
+        }
+        :return
+        {
+            "error": 0, # 无错误为0, 否则出错.
+            "result": [] # 如果成功会返回添加到自己网盘的文件列表
+        }
+
+        context是从分享页面的html中提取的json, 里面保存了分享文件列表
+        暂时有用的是file_list, uk, shareid
+        context = {
+            "typicalPath": "\/\u65b0\u5efa\u6587\u4ef6\u5939(1)\/[SumiSora][Yosuga_no_Sora][BDRip][BIG5][720P]",
+            "self": false,
+            "username": "",
+            "photo": "http:\/\/himg.bdimg.com\/sys\/portrait\/item\/0237bb1b.jpg",
+            "uk": 924798052,
+            "ctime": 1455779404,
+            "flag": 2,
+            "linkusername": "cls1010123",
+            "vCnt": 118442,
+            "tCnt": 27916,
+            "dCnt": 12006,
+            "file_list": {
+                "errno": 0,
+                "list": [{
+                    "fs_id": 882212291049391,
+                    "app_id": "250528",
+                    "parent_path": "%2F%E6%96%B0%E5%BB%BA%E6%96%87%E4%BB%B6%E5%A4%B9%281%29",
+                    "server_filename": "[SumiSora][Yosuga_no_Sora][BDRip][BIG5][720P]",
+                    "size": 0,
+                    "server_mtime": 1455779174,
+                    "server_ctime": 1455779174,
+                    "local_mtime": 1455779174,
+                    "local_ctime": 1455779174,
+                    "isdir": 1,
+                    "isdelete": "0",
+                    "status": "0",
+                    "category": 6,
+                    "share": "0",
+                    "path_md5": "18281300157632491061",
+                    "delete_fs_id": "0",
+                    "extent_int3": "0",
+                    "extent_tinyint1": "0",
+                    "extent_tinyint2": "0",
+                    "extent_tinyint3": "0",
+                    "extent_tinyint4": "0",
+                    "path": "\/\u65b0\u5efa\u6587\u4ef6\u5939(1)\/[SumiSora][Yosuga_no_Sora][BDRip][BIG5][720P]",
+                    "root_ns": 465254146,
+                    "md5": "",
+                    "file_key": ""
+                }]
+            },
+            "loginstate": 0,
+            "channel": 4,
+            "third_url": 0,
+            "bdstoken": null ,
+            "sampling": {
+                "expvar": ["chengyong"]
+            },
+            "is_vip": 0,
+            "description": "",
+            "shorturl": "1skhBegP",
+            "shareinfo": "",
+            "is_baiduspider": 0,
+            "isinwhitelist": 0,
+            "public": 0,
+            "shareid": 23915657,
+            "bj_unicom": 0,
+            "visitor_uk": null ,
+            "visitor_avatar": null ,
+            "timestamp": 1458198232,
+            "sign": "xxxx",
+            "sekey": "xxxx",
+            "novelid": false,
+            "is_master_vip": 0,
+            "urlparam": [],
+            "XDUSS": "null"
+        }
+        """
+        # 这里无论是短链接还是长链接如果带密码, 则都被重定向到长链接, 可以直接取出shareid, uk
+        # 而如果是不带密码的分享, 则此时还不需要shareid,uk
+        respond = self._request(None, url=url)
+
+        target_url = respond.url
+        shareid, uk = None, None
+        m = re.search(r"shareid=(\d+)", target_url)
+        if m:
+            shareid = m.group(1)
+        m = re.search(r"uk=(\d+)", target_url)
+        if m:
+            uk = m.group(1)
+
+        # 检查验证码, 如果成功, 当前用户就被授权直接访问资源了
+        if password:
+            verify_result = self._verify_shared_file(shareid, uk, password)
+            if not verify_result or verify_result['errno'] != 0:
+                return verify_result
+
+        # 从html中解析文件列表, 同时把shareid, uk也解析出来
+        html = self._request(None, url=target_url).content
+        r = re.compile(r".*_context =(.*);.*")
+        m = r.search(html)
+        if m:
+            context = json.loads(m.group(1))
+            file_list = context['file_list']['list']
+            uk = str(context['uk'])
+            shareid = str(context['shareid'])
+            ret = {"filelist": []}
+            for f in file_list:
+                file_obj = {
+                    'filename': f['server_filename'],
+                    'size': f['size'],
+                    'isdir': f['isdir']
+                }
+                if not filter_callback or filter_callback(file_obj):
+                    ret['filelist'].append(f['path'])
+            save_share_file_ret = self._save_shared_file_list(shareid, uk, path, ret['filelist'])
+            if save_share_file_ret and save_share_file_ret['errno'] == 0:
+                return save_share_file_ret
+            else:
+                return ret
+        else:
+            # 获取文件列表失败
+            return {"errno": -1, "error_msg": "PCS.save_share_list failed, mayby url is incorrect!"}
+
     # Deprecated
     # using download_url to get real download url
     def download(self, remote_path, **kwargs):
@@ -723,7 +891,6 @@ class PCS(BaseClass):
         url = 'https://{0}/rest/2.0/pcs/file'.format(BAIDUPCS_SERVER)
         return self._request('file', 'download', url=url,
                              extra_params=params, **kwargs)
-
 
     def get_streaming(self, path, stype="M3U8_AUTO_480", **kwargs):
         """获得视频的m3u8列表
@@ -1618,4 +1785,3 @@ class PCS(BaseClass):
                 'block_list': json.dumps(block_list)}
 
         return self._request('precreate', 'post', data=data, **kwargs)
-
