@@ -78,14 +78,6 @@ $ pip install baidupcsapi
 上传
 -------
 
-有时间写个demo，大概是
-将文件分块，计算每一块的MD5
-precreate 对于服务器上的某个文件需要上传的块
-upload_tmpfile 上传临时文件（块）
-upload_superfile 合并块（在precreate返回所需块为空时调用本函数可合并文件）
-注意，百度服务器上文件是分块保存的，块不会消失
-
-  
 上传文件的进度条实现范例
 ------
 
@@ -94,47 +86,64 @@ upload_superfile 合并块（在precreate返回所需块为空时调用本函数
 		progress：当前传输完成字节数
 		
 ```python
-	import progressbar
-	from baidupcsapi import PCS
-	class ProgressBar():
-	    def __init__(self):
-	        self.first_call = True
-	    def __call__(self, *args, **kwargs):
-	        if self.first_call:
-	            self.widgets = [progressbar.Percentage(), ' ', progressbar.Bar(marker=progressbar.RotatingMarker('>')),
-	                            ' ', progressbar.ETA()]
-	            self.pbar = progressbar.ProgressBar(widgets=self.widgets, maxval=kwargs['size']).start()
-	            self.first_call = False
-	
-	        if kwargs['size'] <= kwargs['progress']:
-	            self.pbar.finish()
-	        else:
-	            self.pbar.update(kwargs['progress'])
-	
-	
-	pcs = PCS('username','password')
-	test_file = open('bigfile.pdf','rb').read()
-	ret = pcs.upload('/',test_file,'bigfile.pdf',callback=ProgressBar())
+import progressbar
+from baidupcsapi import PCS
+class ProgressBar():
+    def __init__(self):
+        self.first_call = True
+    def __call__(self, *args, **kwargs):
+        if self.first_call:
+            self.widgets = [progressbar.Percentage(), ' ', progressbar.Bar(marker=progressbar.RotatingMarker('>')),
+                            ' ', progressbar.ETA()]
+            self.pbar = progressbar.ProgressBar(widgets=self.widgets, maxval=kwargs['size']).start()
+            self.first_call = False
+
+        if kwargs['size'] <= kwargs['progress']:
+            self.pbar.finish()
+        else:
+            self.pbar.update(kwargs['progress'])
+
+
+pcs = PCS('username','password')
+test_file = open('bigfile.pdf','rb').read()
+ret = pcs.upload('/',test_file,'bigfile.pdf',callback=ProgressBar())
 ```
 
-合并文件
+上传大文件
 ------
 
-可以用两个纯文本文档合并，这样产生的新文档是两个文本文档的文字合并
+将大文件切成一个个块，分批上传
 注意upload系列的函数都可以指定callback参数
 
 ```python
+#coding: utf-8
+import os,json,sys,tempfile
+from baidupcsapi import PCS
+
 pcs = PCS('username','password')
-print 'chunk1'
-ret = pcs.upload_tmpfile(open('1.txt','rb'))
-md51 = json.loads(ret.content)['md5']
-print 'chunk2'
-ret = pcs.upload_tmpfile(open('2.txt','rb'))
-md52 = json.loads(ret.content)['md5']
-print 'merge'
-ret = pcs.upload_superfile('/3.txt',[md51,md52])
+chinksize = 1024*1024*16
+fid = 1
+md5list = []
+tmpdir = tempfile.mkdtemp('bdpcs')
+with open(sys.argv[1],'rb') as infile:
+    while 1:
+        data = infile.read(chinksize)
+        if len(data) == 0: break
+        smallfile = os.path.join(tmpdir, 'tmp%d' %fid)
+        with open(smallfile, 'wb') as f:
+            f.write(data)
+        print('chunk%d size %d' %(fid, len(data)))
+        fid += 1
+        print('start uploading...')
+        ret = pcs.upload_tmpfile(open(smallfile, 'rb'))
+        md5list.append(json.loads(ret.content)['md5'])
+        print('md5: %s' %(md5list[-1]))
+        os.remove(smallfile)
+
+os.rmdir(tmpdir)
+ret = pcs.upload_superfile('/'+os.path.basename(sys.argv[1]), md5list)
 print ret.content
 ```
-	
-在根目录下就会有3.txt
+
+`python upload.py huge_file`
 
