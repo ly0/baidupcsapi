@@ -174,6 +174,15 @@ class BaseClass(object):
             if v is None:
                 data.pop(k)
 
+    def user_info(self, **kwargs):
+        params = {
+            'method': "query",
+            'reminder': "1",
+        }
+
+        url = 'https://pan.baidu.com/rest/2.0/membership/user'
+        return self._request('membership/user', 'user', url=url, extra_params=params, **kwargs)
+
     def _initiate(self):
         if not self._load_cookies():
             self.session.get('http://www.baidu.com')
@@ -290,6 +299,8 @@ class BaseClass(object):
             raise LoginFailed('Logging failed.')
         logging.info('user %s Logged in BDUSS: %s' %
                      (self.username, self.user['BDUSS']))
+        
+        self.user_info()
         self._save_cookies()
 
     def _check_account_exception(self, content):
