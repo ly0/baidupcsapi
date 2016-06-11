@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 __title__ = 'baidupcsapi'
-__version__ = '0.3.7'
-__author__ = 'liyangjie,mozillazg,capric8416'
+__version__ = '0.3.8'
+__author__ = 'liyangjie,mozillazg,capric8416,a1exwang'
 __license__ = 'MIT'
 
 from setuptools import setup
