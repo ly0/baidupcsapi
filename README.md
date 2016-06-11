@@ -3,11 +3,11 @@
 
 贡献者(字典序)
 ======
-[a1exwang](https://github.com/a1exwang)
-[capric8416](https://github.com/a1exwang)
-[jonans](https://github.com/jonans)
-[ly0](https://github.com/ly0)
-[morefreeze](https://github.com/morefreeze)
+* [a1exwang](https://github.com/a1exwang)
+* [capric8416](https://github.com/a1exwang)
+* [jonans](https://github.com/jonans)
+* [ly0](https://github.com/ly0)
+* [morefreeze](https://github.com/morefreeze)
 
 项目名称解释
 -----------
