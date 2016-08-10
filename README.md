@@ -1,6 +1,10 @@
 百度网盘API
 ====================================
 
+讨论
+======
+[Google Group](https://groups.google.com/forum/#!forum/baidupcsapi)
+
 贡献者(字典序)
 ======
 * [a1exwang](https://github.com/a1exwang)
