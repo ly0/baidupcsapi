@@ -837,7 +837,7 @@ class PCS(BaseClass):
             uk = m.group(1)
 
         # 检查验证码, 如果成功, 当前用户就被授权直接访问资源了
-        if password:
+        if shareid and uk and password:
             verify_result = self._verify_shared_file(shareid, uk, password)
             if not verify_result or verify_result['errno'] != 0:
                 return verify_result
