@@ -14,6 +14,7 @@ import base64
 import platform
 import subprocess
 import sys
+import urlparse
 from hashlib import sha1, md5
 from urllib import urlencode, quote
 from zlib import crc32
@@ -637,7 +638,6 @@ class PCS(BaseClass):
         sign1 = re.search(r'"sign1":"([A-Za-z0-9]+)"', html).group(1)
         sign3 = re.search(r'"sign3":"([A-Za-z0-9]+)"', html).group(1)
         timestamp = re.search(r'"timestamp":([0-9]+)[^0-9]', html).group(1)
-
         def sign2(j, r):
             a = []
             p = []
@@ -667,7 +667,6 @@ class PCS(BaseClass):
                 o += chr(ord(r[q]) ^ k)
 
             return base64.b64encode(o)
-
         self.dsign = sign2(sign3, sign1)
         self.timestamp = timestamp
 
@@ -722,7 +721,18 @@ class PCS(BaseClass):
                 file_list.append(get_url(entry['dlink']))
 
         return file_list
-
+    def SharedDLinkForFS_IDList(self,fsid_list,shareid,uk):
+        url = "https://pan.baidu.com/api/sharedownload"
+        SEKeyString=json.dumps({"sekey":urlparse.unquote(self.session.cookies["BDCLND"])});
+        data={
+                "encrypt":0,
+                "extra":SEKeyString,
+                "uk":uk,
+                "primaryid":shareid,
+                "product":"share",
+                "fid_list":json.dumps(fsid_list),
+                }
+        return json.loads(self._request(None, data=data,extra_params={"sign":self.sign,"web":1,"channel":"chunlei","clienttype":0,"timestamp":self.timestamp},url=url).content)
     def save_album_file(self, album_id, from_uk, save_path, fsid_list):
         data = {
             "from_uk": from_uk,
@@ -770,7 +780,7 @@ class PCS(BaseClass):
             if(Info.has_key('parent_path')):
                 PP=Info['parent_path']
             if(int(Info['isdir'])==1):
-                FileListCurrentDict[Info['path']]=self._ScanFolder=self.ListSharedFolder(shareid,uk,PP+Info['path'],page=1,number=100)
+                FileListCurrentDict[Info['path']]=self._ScanFolder(url,shareid,uk,PP+Info['path'])
             else:
                 if(FileListCurrentDict.has_key('Files')==False):
                     FileListCurrentDict["Files"]=list()
@@ -798,6 +808,15 @@ class PCS(BaseClass):
         html = self._request(None, url="https://pan.baidu.com/share/link?shareid="+str(shareid)+"&uk="+str(uk)).content
         r = re.compile(r".*_context =(.*);.*")
         m = r.search(html)
+        try:
+            Regex=re.compile('sign = "([A-Za-z0-9]+)"')
+            self.sign=Regex.search(html).group(1)
+            Regex=re.compile('TIMESTAMP = "([A-Za-z0-9]+)"')
+            self.timestamp=int(Regex.search(html).group(1))
+        except:
+            print "Can't find sign/timestamp"
+            print html
+            raise
         if m:
             context = json.loads(m.group(1))
             fl=None
@@ -826,7 +845,7 @@ class PCS(BaseClass):
                     fl = context['file_list']['list']#Root FileList
                 except:
                     print "File_List Not Found in HTML"
-                    print html
+                    print context
                     raise
                 FileList=dict()
                 for Info in fl :
