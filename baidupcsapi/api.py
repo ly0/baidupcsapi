@@ -844,12 +844,7 @@ class PCS(BaseClass):
                 return "Error"
 
 
-
-
-
-
-
-    def save_share_list(self, url, path, password=None, filter_callback=None,SaveToLocal=True):
+    def save_share_list(self, url, path, password=None, filter_callback=None):
         """ 保存分享文件列表到自己的网盘, 支持密码, 支持文件过滤的回调函数
         :param url: 分享的url
         :type url: str
@@ -988,6 +983,9 @@ class PCS(BaseClass):
         else:
             # 获取文件列表失败
             return {"errno": -1, "error_msg": "PCS.save_share_list failed, mayby url is incorrect!"}
+
+
+
 
     # Deprecated
     # using download_url to get real download url
