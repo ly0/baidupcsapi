@@ -11,6 +11,7 @@ import pickle
 import string
 import random
 import base64
+import sys
 from hashlib import sha1, md5
 from urllib import urlencode, quote
 from zlib import crc32
@@ -36,6 +37,25 @@ BAIDUPAN_HEADERS = {"Referer": "http://pan.baidu.com/disk/home",
 # uses CDN_DOMAIN/monitor.jpg to test speed for each CDN
 api_template = 'http://%s/api/{0}' % BAIDUPAN_SERVER
 
+
+def defaultCaptchaHandler(imageURL)
+    F=tempfile.NamedTemporaryFile(suffix=".png")
+    data=urllib2.urlopen(imageURL).read()
+    F.write(data)
+    F.flush()
+    filename=F.name
+    print filename
+    osName = platform.system()
+    if osName == 'Windows':
+        subprocess.call([filename.decode('utf8').encode('cp936')], shell=True)
+    elif osName == 'Linux':
+        subprocess.call(['gvfs-open', filename])
+    elif osName == 'Darwin':
+        subprocess.call(['open', filename])
+    else:
+        raise RuntimeException("Unsupported Platform")
+    verify_code = raw_input('Input verify code > ')
+    return verify_code
 
 class LoginFailed(Exception):
 
@@ -128,7 +148,7 @@ class BaseClass(object):
         if captcha_func:
             self.captcha_func = captcha_func
         else:
-            self.captcha_func = self.show_captcha
+            self.captcha_func = defaultCaptchaHandler
         # 设置pcs服务器
         logging.debug('setting pcs server')
         self.set_pcs_server(self.get_fastest_pcs_server())
@@ -299,10 +319,9 @@ class BaseClass(object):
             raise LoginFailed('Logging failed.')
         logging.info('user %s Logged in BDUSS: %s' %
                      (self.username, self.user['BDUSS']))
-        
+
         self.user_info()
         self._save_cookies()
-
     def _check_account_exception(self, content):
         err_id = re.findall('err_no=([\d]+)', content)[0]
 
@@ -402,7 +421,7 @@ class PCS(BaseClass):
         :type password: str
 
         :param captcha_callback: 验证码的回调函数
-        
+
             .. note::
                 该函数会获得一个jpeg文件的内容，返回值需为验证码
         """
@@ -728,8 +747,103 @@ class PCS(BaseClass):
             "path": path
         }
         return json.loads(self._request(None, url=url, data=data).content)
+    def ListSharedFolder(self, shareid,uk,dirPath,page=1,number=100):
+        return json.loads(self.list_files(dirPath,extra_params={"shareid":shareid,
+                                "uk":uk,
+                                "web":'1',
+                                "page":page,
+                                "number":number,
+                                "showempty":0,
+                                "channel":"chunlei",
+                                "clienttype":0
+                                },isShare=True).text)
+    def _ScanFolder(self, url,shareid,uk,dirPath,password=None, filter_callback=None):
+        FileList=self.ListSharedFolder(shareid,uk,dirPath,page=1,number=100)['list']
+        FileListCurrentDict=dict()
 
-    def save_share_list(self, url, path, password=None, filter_callback=None):
+        print FileList
+        for Info in FileList:
+            PP=""
+            if(Info.has_key('parent_path')):
+                PP=Info['parent_path']
+            if(int(Info['isdir'])==1):
+                FileListCurrentDict[Info['path']]=self._ScanFolder=self.ListSharedFolder(shareid,uk,PP+Info['path'],page=1,number=100)
+            else:
+                if(FileListCurrentDict.has_key('Files')==False):
+                    FileListCurrentDict["Files"]=list()
+                FileListCurrentDict["Files"].append(Info)
+        return FileListCurrentDict
+
+
+
+    def DownloadShareList(self, url, InitialPath="", password=None, filter_callback=None):
+        #处理根目录列表
+        DownloadURLList=dict()
+        respond = self._request(None, url=url)
+
+        target_url = respond.url
+        shareid, uk = None, None
+        m = re.search(r"shareid=(\d+)", target_url)
+        if m:
+            shareid = m.group(1)
+        m = re.search(r"uk=(\d+)", target_url)
+        if m:
+            uk = m.group(1)
+
+        # 检查验证码, 如果成功, 当前用户就被授权直接访问资源了
+        vf_result=self._verify_shared_file(shareid, uk, password)
+        html = self._request(None, url="https://pan.baidu.com/share/link?shareid="+str(shareid)+"&uk="+str(uk)).content
+        r = re.compile(r".*_context =(.*);.*")
+        m = r.search(html)
+        if m:
+            context = json.loads(m.group(1))
+            fl=None
+            try:
+                fl = context['file_list']['list']#Root FileList
+            except:
+                print "File_List Not Found in HTML"
+                print html
+                raise
+            FileList=dict()
+            for Info in fl :
+                if(int(Info['isdir'])==1):
+                    FileList[Info['path']]=self._ScanFolder(url,shareid,uk,Info['path'],password=password)
+                else:
+                    if(FileList.has_key('Files')==False):
+                        FileList["Files"]=list()
+                    FileList["Files"].append(Info)
+            return FileList
+        else:
+            r = re.compile(r".*yunData.setData\((\{.*\})\);.*")#搜索第二类context
+            m = r.search(html)
+            if m:
+                context = json.loads(m.group(1))
+                fl=None
+                try:
+                    fl = context['file_list']['list']#Root FileList
+                except:
+                    print "File_List Not Found in HTML"
+                    print html
+                    raise
+                FileList=dict()
+                for Info in fl :
+                    if(int(Info['isdir'])==1):
+                        FileList[Info['path']]=self._ScanFolder(url,shareid,uk,Info['path'],password=password)
+                    else:
+                        if(FileList["Files"]==None):
+                            FileList["Files"]=list()
+                            FileList["Files"].append(Info)
+                            return FileList
+            else:
+                return "Error"
+
+
+
+
+
+
+
+    def save_share_list(self, url, path, password=None, filter_callback=None,SaveToLocal=True):
         """ 保存分享文件列表到自己的网盘, 支持密码, 支持文件过滤的回调函数
         :param url: 分享的url
         :type url: str
@@ -937,7 +1051,7 @@ class PCS(BaseClass):
                     # params error
                     return 31023
             return ret.content
- 
+
     def mkdir(self, remote_path, **kwargs):
         """为当前用户创建一个目录.
 
@@ -968,7 +1082,7 @@ class PCS(BaseClass):
         return self._request('create', 'post', data=data, **kwargs)
 
     def list_files(self, remote_path, by="name", order="desc",
-                   limit=None, **kwargs):
+                   limit=None, extra_params=None,isShare=False,**kwargs):
         """获取目录下的文件列表.
 
         :param remote_path: 网盘中目录的路径，必须以 / 开头。
@@ -1010,12 +1124,14 @@ class PCS(BaseClass):
             desc = "1"
         else:
             desc = "0"
-
-        params = {
-            'dir': remote_path,
-            'order': by,
-            'desc': desc
-        }
+        params=dict();
+        if(extra_params!=None):
+            params.update(extra_params)
+        params['dir']=remote_path
+        params['order']= by
+        params['desc']=desc
+        if(isShare):
+            return self._request('/share/list', None, extra_params=params,url="https://pan.baidu.com/share/list",**kwargs)
         return self._request('list', 'list', extra_params=params, **kwargs)
 
     def move(self, path_list, dest, **kwargs):
