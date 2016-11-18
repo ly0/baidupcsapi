@@ -11,6 +11,8 @@ import pickle
 import string
 import random
 import base64
+import platform
+import subprocess
 import sys
 from hashlib import sha1, md5
 from urllib import urlencode, quote
@@ -20,6 +22,7 @@ import requests
 requests.packages.urllib3.disable_warnings()
 import rsa
 import urllib
+import tempfile
 
 
 """
@@ -38,9 +41,9 @@ BAIDUPAN_HEADERS = {"Referer": "http://pan.baidu.com/disk/home",
 api_template = 'http://%s/api/{0}' % BAIDUPAN_SERVER
 
 
-def defaultCaptchaHandler(imageURL)
+def defaultCaptchaHandler(imageURL):
     F=tempfile.NamedTemporaryFile(suffix=".png")
-    data=urllib2.urlopen(imageURL).read()
+    data=requests.get(imageURL).content
     F.write(data)
     F.flush()
     filename=F.name
@@ -53,7 +56,7 @@ def defaultCaptchaHandler(imageURL)
     elif osName == 'Darwin':
         subprocess.call(['open', filename])
     else:
-        raise RuntimeException("Unsupported Platform")
+        print "Please enter the verification code in:"+filename
     verify_code = raw_input('Input verify code > ')
     return verify_code
 
@@ -827,13 +830,16 @@ class PCS(BaseClass):
                     raise
                 FileList=dict()
                 for Info in fl :
-                    if(int(Info['isdir'])==1):
-                        FileList[Info['path']]=self._ScanFolder(url,shareid,uk,Info['path'],password=password)
-                    else:
-                        if(FileList["Files"]==None):
-                            FileList["Files"]=list()
+                    PP=""
+                    if(Info.has_key('parent_path')):
+                        PP=Info['parent_path']
+                        if(int(Info['isdir'])==1):
+                            FileList[Info['path']]=self._ScanFolder=self.ListSharedFolder(shareid,uk,PP+Info['path'],page=1,number=100)
+                        else:
+                            if(FileList.has_key('Files')==False):
+                                FileList["Files"]=list()
                             FileList["Files"].append(Info)
-                            return FileList
+
             else:
                 return "Error"
 
