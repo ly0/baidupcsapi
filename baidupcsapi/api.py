@@ -25,12 +25,11 @@ import rsa
 import urllib
 import tempfile
 
-
-"""
+'''
 logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S')
-"""
+'''
 
 BAIDUPAN_SERVER = 'pan.baidu.com'
 BAIDUPCS_SERVER = 'pcs.baidu.com'
@@ -141,7 +140,7 @@ class BaseClass(object):
 
     """提供PCS类的基本方法
     """
-
+    codeString=None#某些情况下会遇到请求多次被拦截。增加全局codeString方便应对
     def __init__(self, username, password, api_template=api_template, captcha_func=None):
         self.session = requests.session()
         self.api_template = api_template
@@ -305,6 +304,7 @@ class BaseClass(object):
             # 是否需要验证码
             if 'err_no=257' in result.content or 'err_no=6' in result.content:
                 code_string = re.findall('codeString=(.*?)&', result.content)[0]
+                self.codeString=code_string
                 logging.debug('need captcha, codeString=' + code_string)
                 captcha = self._get_captcha(code_string)
                 continue
@@ -721,7 +721,7 @@ class PCS(BaseClass):
                 file_list.append(get_url(entry['dlink']))
 
         return file_list
-    def SharedDLinkForFS_IDList(self,fsid_list,shareid,uk):
+    def SharedDLinkForFS_IDList(self,fsid_list,shareid,uk,sign):
         url = "https://pan.baidu.com/api/sharedownload"
         SEKeyString=json.dumps({"sekey":urlparse.unquote(self.session.cookies["BDCLND"])});
         data={
@@ -732,7 +732,9 @@ class PCS(BaseClass):
                 "product":"share",
                 "fid_list":json.dumps(fsid_list),
                 }
-        return json.loads(self._request(None, data=data,extra_params={"sign":self.sign,"web":1,"channel":"chunlei","clienttype":0,"timestamp":self.timestamp},url=url).content)
+        ReqHeader={"Referer":"https://pan.baidu.com/share/link?shareid="+shareid+"&uk="+uk}
+        Req=self._request(None, data=data,extra_params={"sign":sign,"clienttype":0,"timestamp":int(time.time())},url=url,headers=ReqHeader).content
+        return json.loads(Req)
     def save_album_file(self, album_id, from_uk, save_path, fsid_list):
         data = {
             "from_uk": from_uk,
@@ -742,16 +744,23 @@ class PCS(BaseClass):
         url = "http://pan.baidu.com/pcloud/album/transfertask/create"
         print (self._request(None, data=data, url=url).content)
 
-    def _verify_shared_file(self, shareid, uk, password):
+    def _verify_shared_file(self, shareid, uk, password,vcode="",vcode_str=""):
         data = {
             "pwd": password,
-            "vcode": "",
-            "vcode_str": "",
+            "vcode": vcode,
+            "vcode_str": vcode_str,
             "shareid": shareid,
             "uk": uk
         }
         url = "http://pan.baidu.com/share/verify?shareid="+shareid+"&uk="+uk
         return json.loads(self._request(None, data=data, url=url).content)
+
+    def _handle_shared_captcha(self,shareid,uk,password):#处理分享页的验证码
+        rep=json.loads(self._request(None,data={"prod":"shareverify"},url="https://pan.baidu.com/api/getcaptcha").content)
+        Vcode=self.captcha_func("https://pan.baidu.com/genimage?"+str(rep["vcode_str"]))
+        return self._verify_shared_file(shareid,uk,password,vcode=Vcode,vcode_str=str(rep["vcode_str"]))
+
+
 
     def _save_shared_file_list(self, shareid, uk, path, file_list):
         url = "http://pan.baidu.com/share/transfer?shareid="+shareid+"&from="+uk
@@ -767,100 +776,86 @@ class PCS(BaseClass):
                                 "page":page,
                                 "number":number,
                                 "showempty":0,
-                                "channel":"chunlei",
                                 "clienttype":0
                                 },isShare=True).text)
-    def _ScanFolder(self, url,shareid,uk,dirPath,password=None, filter_callback=None):
-        FileList=self.ListSharedFolder(shareid,uk,dirPath,page=1,number=100)['list']
+    def _ScanFolder(self,shareid,uk,dirPath,filter_callback=None,InitFileList=None):
         FileListCurrentDict=dict()
+        if InitFileList!=None:
+            FileList=InitFileList
+            for item in FileList:
+                FileListCurrentDict[item["server_filename"]]=self._ScanFolder(shareid,uk,item["server_filename"])
 
-        print FileList
+        else:
+            FileList=self.ListSharedFolder(shareid,uk,dirPath,page=1,number=100)['list']
         for Info in FileList:
             PP=""
             if(Info.has_key('parent_path')):
                 PP=Info['parent_path']
             if(int(Info['isdir'])==1):
-                FileListCurrentDict[Info['path']]=self._ScanFolder(url,shareid,uk,PP+Info['path'])
+                FileListCurrentDict[Info['path']]=self._ScanFolder(shareid,uk,PP+Info['path'])
             else:
                 if(FileListCurrentDict.has_key('Files')==False):
                     FileListCurrentDict["Files"]=list()
                 FileListCurrentDict["Files"].append(Info)
         return FileListCurrentDict
 
-
-
-    def DownloadShareList(self, url, InitialPath="", password=None, filter_callback=None):
-        #处理根目录列表
-        DownloadURLList=dict()
-        respond = self._request(None, url=url)
-
+    def PrepareURL(self,URL,password=None,filter_callback=None):
+        respond = self._request(None, url=URL)
         target_url = respond.url
-        shareid, uk = None, None
+        shareid, uk= None, None#单文件分享url内有fid
         m = re.search(r"shareid=(\d+)", target_url)
         if m:
             shareid = m.group(1)
         m = re.search(r"uk=(\d+)", target_url)
         if m:
             uk = m.group(1)
-
-        # 检查验证码, 如果成功, 当前用户就被授权直接访问资源了
-        vf_result=self._verify_shared_file(shareid, uk, password)
         html = self._request(None, url="https://pan.baidu.com/share/link?shareid="+str(shareid)+"&uk="+str(uk)).content
-        r = re.compile(r".*_context =(.*);.*")
+        PWIndex=unicode(html,"utf-8").find(unicode("请输入提取密码","utf-8"))
+        if PWIndex > -1:#需要密码
+            if(password!=None):
+                errno=int(self._verify_shared_file(shareid,uk,password)["errno"])#0正常 -12验证码错误 -9提取码错误
+                if errno==0:
+                    pass
+                elif errno==-12:
+                    #需要验证码
+                    errno=int(self._handle_shared_captcha(self,shareid,uk,password)["errno"])
+                elif errno==-9:
+                    raise ValueError(u"Wrong Password")
+                else:
+                    raise ValueError(u"Unknown errno:"+errno)
+            else:
+                raise ValueError(u"This Shared File is Password-Protected")
+        return self._DownloadShareList(shareid,uk,filter_callback=filter_callback)
+
+
+    def _DownloadShareList(self,shareid,uk,InitialPath="/", filter_callback=None):
+        #处理根目录列表
+        DownloadURLList=dict()
+        InitURL="https://pan.baidu.com/share/link?shareid="+str(shareid)+"&uk="+str(uk)
+        html = self._request(None, url=InitURL).content
+        r = re.compile(r".*yunData.setData\((\{\"loginstate.*\})\);.*")#搜索第二类context
         m = r.search(html)
-        try:
-            Regex=re.compile('sign = "([A-Za-z0-9]+)"')
-            self.sign=Regex.search(html).group(1)
-            Regex=re.compile('TIMESTAMP = "([A-Za-z0-9]+)"')
-            self.timestamp=int(Regex.search(html).group(1))
-        except:
-            print "Can't find sign/timestamp"
-            print html
-            raise
         if m:
             context = json.loads(m.group(1))
             fl=None
             try:
                 fl = context['file_list']['list']#Root FileList
             except:
-                print "File_List Not Found in HTML"
-                print html
-                raise
-            FileList=dict()
-            for Info in fl :
-                if(int(Info['isdir'])==1):
-                    FileList[Info['path']]=self._ScanFolder(url,shareid,uk,Info['path'],password=password)
+                raise ValueError("File_List Not Found in HTML from: "+InitURL)
+            for Item in fl:
+                if int(Item["isdir"])==1:
+                    DownloadURLList[Item["server_filename"]]=self._ScanFolder(shareid,uk,InitialPath+Item["server_filename"],filter_callback=None,InitFileList=None)
                 else:
-                    if(FileList.has_key('Files')==False):
-                        FileList["Files"]=list()
-                    FileList["Files"].append(Info)
-            return FileList
-        else:
-            r = re.compile(r".*yunData.setData\((\{.*\})\);.*")#搜索第二类context
-            m = r.search(html)
-            if m:
-                context = json.loads(m.group(1))
-                fl=None
-                try:
-                    fl = context['file_list']['list']#Root FileList
-                except:
-                    print "File_List Not Found in HTML"
-                    print context
-                    raise
-                FileList=dict()
-                for Info in fl :
-                    PP=""
-                    if(Info.has_key('parent_path')):
-                        PP=Info['parent_path']
-                        if(int(Info['isdir'])==1):
-                            FileList[Info['path']]=self._ScanFolder=self.ListSharedFolder(shareid,uk,PP+Info['path'],page=1,number=100)
-                        else:
-                            if(FileList.has_key('Files')==False):
-                                FileList["Files"]=list()
-                            FileList["Files"].append(Info)
+                    DownloadURLList[Item["server_filename"]]=Item
 
-            else:
-                return "Error"
+        else:
+            raise ValueError("yunData.setData Not Found in HTML from: "+InitURL)
+
+        RSign=re.compile(r".*yunData\.sign = \"(.*)\";")#搜索sign
+
+        DownloadURLList["Sign"]=str(RSign.search(html).group(1))
+
+        return DownloadURLList
 
 
     def save_share_list(self, url, path, password=None, filter_callback=None):
