@@ -1,6 +1,8 @@
 百度网盘API
 ====================================
 
+**注意,本项目正在移植在Python3,会放弃对Python2的支持.**
+
 讨论
 ======
 [Google Group](https://groups.google.com/forum/#!forum/baidupcsapi)
@@ -12,6 +14,7 @@
 * [jonans](https://github.com/jonans)
 * [ly0](https://github.com/ly0)
 * [morefreeze](https://github.com/morefreeze)
+* [Naville](https://github.com/Naville)
 
 项目名称解释
 -----------
@@ -25,15 +28,6 @@ TODOS
 ------
 * [ ] 获取分享链接中文件列表接口
 * [ ] 保存分享到用户网盘接口
-
-随时更新处
------------
-
-* 再也不会看到 *wenxintishi.avi* 了!
-* 百度网盘登录现在需要RSA加密后传输, 详情请参考 *api.py* 中的 *PCS._get_pubkey* 和 *PCS._login* 函数
-* 新加入 *PCS.download_url* 方法, 可以直接获得可用下载链接 (支持批量下载, 参数为 *str* 或者 *str list*)
-* 记住验证码的处理函数在初始化 *PCS* 类时通过 *captcha_func* 参数指定, 其中第一个参数会给予 JPEG 数据, handler 处理完后需要返回一个可行的验证码.
-
 
 正文
 ======================

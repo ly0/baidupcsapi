@@ -31,7 +31,7 @@ ref:https://github.com/mozillazg/baidu-pcs-python-sdk
 
 .. code-block:: bash
 
-    $ pip install baidupcsapi
+	$ pip install baidupcsapi
 
 链接
 ==================
@@ -45,11 +45,11 @@ ref:https://github.com/mozillazg/baidu-pcs-python-sdk
 
 .. code-block:: python
 
-    >>> from baidupcsapi import PCS
-    >>> pcs = PCS('username','password')
-    >>> print pcs.quota().content
-    >>> print pcs.list_files('/').content
-    
+	>>> from baidupcsapi import PCS
+	>>> pcs = PCS('username','password')
+	>>> print pcs.quota().content
+	>>> print pcs.list_files('/').content
+
 上传文件的进度条实现范例
 ------
 
@@ -63,19 +63,19 @@ ref:https://github.com/mozillazg/baidu-pcs-python-sdk
 	
 	from baidupcsapi import PCS
 	class ProgressBar():
-	    def __init__(self):
-	        self.first_call = True
-	    def __call__(self, *args, **kwargs):
-	        if self.first_call:
-	            self.widgets = [progressbar.Percentage(), ' ', progressbar.Bar(marker=progressbar.RotatingMarker('>')),
-	                            ' ', progressbar.FileTransferSpeed()]
-	            self.pbar = progressbar.ProgressBar(widgets=self.widgets, maxval=kwargs['size']).start()
-	            self.first_call = False
+		def __init__(self):
+			self.first_call = True
+		def __call__(self, *args, **kwargs):
+			if self.first_call:
+				self.widgets = [progressbar.Percentage(), ' ', progressbar.Bar(marker=progressbar.RotatingMarker('>')),
+								' ', progressbar.FileTransferSpeed()]
+				self.pbar = progressbar.ProgressBar(widgets=self.widgets, maxval=kwargs['size']).start()
+				self.first_call = False
 	
-	        if kwargs['size'] <= kwargs['progress']:
-	            self.pbar.finish()
-	        else:
-	            self.pbar.update(kwargs['progress'])
+			if kwargs['size'] <= kwargs['progress']:
+				self.pbar.finish()
+			else:
+				self.pbar.update(kwargs['progress'])
 	
 	
 	pcs = PCS('username','password')

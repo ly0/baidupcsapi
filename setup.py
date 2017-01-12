@@ -1,9 +1,9 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
+# coding=utf-8
 
 __title__ = 'baidupcsapi'
-__version__ = '0.3.8'
-__author__ = 'liyangjie,mozillazg,capric8416,a1exwang'
+__version__ = '0.9.0'
+__author__ = 'ly0, mozillazg101'
 __license__ = 'MIT'
 
 from setuptools import setup
@@ -17,9 +17,6 @@ requirements = [
 packages = [
     'baidupcsapi',
 ]
-
-def long_description():
-    return open('README.rst').read()
 
 setup(
     name='baidupcsapi',
@@ -42,8 +39,8 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
         'Topic :: Utilities',
     ],
     keywords='百度网盘, 百度云, API',
