@@ -1,7 +1,7 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+# coding=utf-8
 
 from functools import wraps
+import sys
 import re
 import time
 import json
@@ -13,22 +13,22 @@ import random
 import base64
 import platform
 import subprocess
-import sys
-import urlparse
-from hashlib import sha1, md5
-from urllib import urlencode, quote
+from urllib import parse as urlparse
+from urllib.parse import urlencode
+from hashlib import md5
 from zlib import crc32
 from requests_toolbelt import MultipartEncoder
 import requests
-requests.packages.urllib3.disable_warnings()
 import rsa
-import urllib
 import tempfile
+
+
+requests.packages.urllib3.disable_warnings()
 
 '''
 logging.basicConfig(level=logging.DEBUG,
-                format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                datefmt='%a, %d %b %Y %H:%M:%S')
+    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+    datefmt='%a, %d %b %Y %H:%M:%S')
 '''
 
 BAIDUPAN_SERVER = 'pan.baidu.com'
@@ -42,12 +42,12 @@ api_template = 'http://%s/api/{0}' % BAIDUPAN_SERVER
 
 
 def defaultCaptchaHandler(imageURL):
-    F=tempfile.NamedTemporaryFile(suffix=".png")
-    data=requests.get(imageURL).content
+    F = tempfile.NamedTemporaryFile(suffix=".png")
+    data = requests.get(imageURL).content
     F.write(data)
     F.flush()
-    filename=F.name
-    print filename
+    filename = F.name
+    print(filename)
     osName = platform.system()
     if osName == 'Windows':
         subprocess.call([filename.decode('utf8').encode('cp936')], shell=True)
@@ -56,22 +56,22 @@ def defaultCaptchaHandler(imageURL):
     elif osName == 'Darwin':
         subprocess.call(['open', filename])
     else:
-        print "Please enter the verification code in:"+filename
-    verify_code = raw_input('Input verify code > ')
+        print("Please enter the verification code in:" + filename)
+    verify_code = input('Input verify code > ')
     return verify_code
 
-class LoginFailed(Exception):
 
+class LoginFailed(Exception):
     """因为帐号原因引起的登录失败异常
     如果是超时则是返回Timeout的异常
     """
     pass
 
+
 # experimental
 
 
 class CancelledError(Exception):
-
     """
     用户取消文件上传
     """
@@ -87,7 +87,6 @@ class CancelledError(Exception):
 
 
 class BufferReader(MultipartEncoder):
-
     """将multipart-formdata转化为stream形式的Proxy类
     """
 
@@ -117,15 +116,16 @@ def check_login(func):
     """检查用户登录状态
     这是pcs的检查方法
     """
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         ret = func(*args, **kwargs)
         if type(ret) == requests.Response:
             try:
                 foo = json.loads(ret.content)
-                if foo.has_key('errno') and foo['errno'] == -6:
+                if 'errno' in foo and foo['errno'] == -6:
                     logging.debug(
-                        'Offline, deleting cookies file then relogin.')
+                            'Offline, deleting cookies file then relogin.')
                     path = '.{0}.cookies'.format(args[0].username)
                     if os.path.exists(path):
                         os.remove(path)
@@ -133,15 +133,17 @@ def check_login(func):
             except:
                 pass
         return ret
+
     return wrapper
 
 
 class BaseClass(object):
-
     """提供PCS类的基本方法
     """
-    codeString=None#某些情况下会遇到请求多次被拦截。增加全局codeString方便应对
-    def __init__(self, username, password, api_template=api_template, captcha_func=None):
+    # 某些情况下会遇到请求多次被拦截。增加全局codeString方便应对
+    codeString = None
+
+    def __init__(self, username, password, api_template=api_template, captcha_func=None, verify_func=None):
         self.session = requests.session()
         self.api_template = api_template
         self.username = username
@@ -152,6 +154,11 @@ class BaseClass(object):
             self.captcha_func = captcha_func
         else:
             self.captcha_func = defaultCaptchaHandler
+
+        if verify_func:
+            self.verify_func = verify_func
+        else:
+            self.verify_func = input
         # 设置pcs服务器
         logging.debug('setting pcs server')
         self.set_pcs_server(self.get_fastest_pcs_server())
@@ -162,7 +169,7 @@ class BaseClass(object):
         :returns: str -- 服务器地址
         """
         ret = requests.get(
-            'https://pcs.baidu.com/rest/2.0/pcs/manage?method=listhost').content
+                'https://pcs.baidu.com/rest/2.0/pcs/manage?method=listhost').content
         serverlist = [server['host'] for server in json.loads(ret)['list']]
         url_pattern = 'http://{0}/monitor.jpg'
         time_record = []
@@ -179,7 +186,7 @@ class BaseClass(object):
         """
         url = 'http://pcs.baidu.com/rest/2.0/pcs/file?app_id=250528&method=locateupload'
         ret = requests.get(url).content
-        foo = json.loads(ret)
+        foo = json.loads(ret.decode('utf-8'))
         return foo['host']
 
     def set_pcs_server(self, server):
@@ -200,7 +207,7 @@ class BaseClass(object):
     def user_info(self, **kwargs):
         params = {
             'method': "query",
-            'reminder': "1",
+            #'reminder': "1",
         }
 
         url = 'https://pan.baidu.com/rest/2.0/membership/user'
@@ -216,9 +223,9 @@ class BaseClass(object):
 
     def _save_cookies(self):
         cookies_file = '.{0}.cookies'.format(self.username)
-        with open(cookies_file, 'w') as f:
+        with open(cookies_file, 'wb') as f:
             pickle.dump(
-                requests.utils.dict_from_cookiejar(self.session.cookies), f)
+                    requests.utils.dict_from_cookiejar(self.session.cookies), f)
 
     def _load_cookies(self):
         cookies_file = '.{0}.cookies'.format(self.username)
@@ -226,9 +233,9 @@ class BaseClass(object):
         if os.path.exists(cookies_file):
             logging.debug('%s cookies file has already existed.' %
                           self.username)
-            with open(cookies_file) as cookies_file:
+            with open(cookies_file, 'rb') as cookies_file:
                 cookies = requests.utils.cookiejar_from_dict(
-                    pickle.load(cookies_file))
+                        pickle.load(cookies_file))
                 logging.debug(str(cookies))
                 self.session.cookies = cookies
                 self.user['BDUSS'] = self.session.cookies['BDUSS']
@@ -239,7 +246,8 @@ class BaseClass(object):
     def _get_token(self):
         # Token
         ret = self.session.get(
-            'https://passport.baidu.com/v2/api/?getapi&tpl=mn&apiver=v3&class=login&tt=%s&logintype=dialogLogin&callback=0' % int(time.time())).text.replace('\'', '\"')
+                'https://passport.baidu.com/v2/api/?getapi&tpl=mn&apiver=v3&class=login&tt=%s&logintype=dialogLogin&callback=0' % int(
+                        time.time())).text.replace('\'', '\"')
         foo = json.loads(ret)
         logging.info('token %s' % foo['data']['token'])
         return foo['data']['token']
@@ -247,7 +255,7 @@ class BaseClass(object):
     def _get_captcha(self, code_string):
         # Captcha
         if code_string:
-            verify_code = self.captcha_func("https://passport.baidu.com/cgi-bin/genimage?" + code_string)
+            verify_code = self.captcha_func("https://passport.baidu.com/cgi-bin/genimage?" + code_string.decode('utf-8'))
         else:
             verify_code = ""
 
@@ -255,25 +263,25 @@ class BaseClass(object):
 
     def show_captcha(self, url_verify_code):
         print(url_verify_code)
-        verify_code = raw_input('open url aboved with your web browser, then input verify code > ')
+        verify_code = input('open url aboved with your web browser, then input verify code > ')
 
         return verify_code
 
     def _get_publickey(self):
         url = 'https://passport.baidu.com/v2/getpublickey?token=' + \
-            self.user['token']
+              self.user['token']
         content = self.session.get(url).content
-        jdata = json.loads(content.replace('\'','"'))
+        jdata = json.loads(content.replace(b'\'', b'"').decode('utf-8'))
         return (jdata['pubkey'], jdata['key'])
 
     def _login(self):
         # Login
-        #code_string, captcha = self._get_captcha()
+        # code_string, captcha = self._get_captcha()
         captcha = ''
         code_string = ''
         pubkey, rsakey = self._get_publickey()
         key = rsa.PublicKey.load_pkcs1_openssl_pem(pubkey)
-        password_rsaed = base64.b64encode(rsa.encrypt(self.password, key))
+        password_rsaed = base64.b64encode(rsa.encrypt(self.password.encode('utf-8'), key))
         while True:
             login_data = {'staticpage': 'http://www.baidu.com/cache/user/html/v3Jump.html',
                           'charset': 'UTF-8',
@@ -299,13 +307,13 @@ class BaseClass(object):
                           'ppui_logintime': '50918',
                           'callback': 'parent.bd__pcbs__oa36qm'}
             result = self.session.post(
-                'https://passport.baidu.com/v2/api/?login', data=login_data)
+                    'https://passport.baidu.com/v2/api/?login', data=login_data)
 
             # 是否需要验证码
-            if 'err_no=257' in result.content or 'err_no=6' in result.content:
-                code_string = re.findall('codeString=(.*?)&', result.content)[0]
-                self.codeString=code_string
-                logging.debug('need captcha, codeString=' + code_string)
+            if b'err_no=257' in result.content or b'err_no=6' in result.content:
+                code_string = re.findall(b'codeString=(.*?)&', result.content)[0]
+                self.codeString = code_string
+                logging.debug('need captcha, codeString=' + code_string.decode('utf-8'))
                 captcha = self._get_captcha(code_string)
                 continue
 
@@ -326,18 +334,58 @@ class BaseClass(object):
 
         self.user_info()
         self._save_cookies()
+
     def _check_account_exception(self, content):
-        err_id = re.findall('err_no=([\d]+)', content)[0]
+        err_id = re.findall(b'err_no=([\d]+)', content)[0].decode('utf-8')
 
         if err_id == '0':
             return
+
+        if err_id == '120021':
+            # 如果用户需要外部认证(邮箱)
+            auth_token = re.findall(b'authtoken=([^&]+)', content)[0]
+            resp = self.session.get('https://passport.baidu.com/v2/sapi/authwidgetverify',
+                                    params={'authtoken': auth_token,
+                                            'type': 'email',
+                                            'apiver': 'v3',
+                                            'action': 'send',
+                                            'vcode': '',
+                                            'questionAndAnswer': '',
+                                            'needsid': '',
+                                            'rsakey': '',
+                                            'countrycode': '',
+                                            'subpro': '',
+                                            'callback': ''
+                                            })
+            if resp.ok:
+                # get vcode
+                vcode = input('Verification Code> ')
+
+                resp = self.session.get('https://passport.baidu.com/v2/sapi/authwidgetverify',
+                                        params={'authtoken': auth_token,
+                                                'type': 'email',
+                                                'apiver': 'v3',
+                                                'action': 'check',
+                                                'vcode': vcode,
+                                                'questionAndAnswer': '',
+                                                'needsid': '',
+                                                'rsakey': '',
+                                                'countrycode': '',
+                                                'subpro': '',
+                                                'callback': ''
+                                                })
+
+                print(resp.content)
+            else:
+                raise LoginFailed("发送安全验证请求失败")
+
         error_message = {
-            '-1':'系统错误, 请稍后重试',
-            '1':'您输入的帐号格式不正确',
-            '3':'验证码不存在或已过期,请重新输入',
+            '-1': '系统错误, 请稍后重试',
+            '1': '您输入的帐号格式不正确',
+            '3': '验证码不存在或已过期,请重新输入',
             '4': '您输入的帐号或密码有误',
             '5': '请在弹出的窗口操作,或重新登录',
-            '6':'验证码输入错误',
+            '6': '验证码输入错误',
             '16': '您的帐号因安全问题已被限制登录',
             '257': '需要验证码',
             '100005': '系统错误, 请稍后重试',
@@ -350,12 +398,12 @@ class BaseClass(object):
         try:
             msg = error_message[err_id]
         except:
-            msg = 'unknown err_id=' + err_id
+            msg = 'unknown err_id=' + err_id.decode('utf-8')
         raise LoginFailed(msg)
 
     def _params_utf8(self, params):
         for k, v in params.items():
-            if isinstance(v, unicode):
+            if isinstance(v, str):
                 params[k] = v.encode('utf-8')
 
     @check_login
@@ -377,7 +425,7 @@ class BaseClass(object):
             headers.update(kwargs['headers'])
             kwargs.pop('headers')
 
-        self._params_utf8(params)
+        #self._params_utf8(params)
         if not url:
             url = self.api_template.format(uri)
         if data or files:
@@ -402,21 +450,21 @@ class BaseClass(object):
                 )
 
                 response = self.session.post(
-                    api, data=body, verify=False, headers=headers, **kwargs)
+                        api, data=body, verify=False, headers=headers, **kwargs)
         else:
             api = url
             if uri == 'filemanager' or uri == 'rapidupload' or uri == 'filemetas' or uri == 'precreate':
                 response = self.session.post(
-                    api, params=params, verify=False, headers=headers, **kwargs)
+                        api, params=params, verify=False, headers=headers, **kwargs)
             else:
+                print(api, params, headers, kwargs, self.session.cookies)
                 response = self.session.get(
-                    api, params=params, verify=False, headers=headers, **kwargs)
+                        api, params=params, verify=False, headers=headers, **kwargs)
         return response
 
 
 class PCS(BaseClass):
-
-    def __init__(self,  username, password, captcha_callback=None):
+    def __init__(self, username, password, captcha_callback=None, verify_callback=None):
         """
         :param username: 百度网盘的用户名
         :type username: str
@@ -428,8 +476,13 @@ class PCS(BaseClass):
 
             .. note::
                 该函数会获得一个jpeg文件的内容，返回值需为验证码
+
+        :param verify_callback: 安全验证码输入函数
+
+            .. note::
+                该函数返回值为字符串作为安全验证码输入
         """
-        super(PCS, self).__init__(username, password, api_template, captcha_func=captcha_callback)
+        super(PCS, self).__init__(username, password, api_template, captcha_func=captcha_callback, verify_func=verify_callback)
 
     def __err_handler(self, act, errno, callback=None, args=(), kwargs={}):
         """百度网盘下载错误控制
@@ -638,18 +691,19 @@ class PCS(BaseClass):
         sign1 = re.search(r'"sign1":"([A-Za-z0-9]+)"', html).group(1)
         sign3 = re.search(r'"sign3":"([A-Za-z0-9]+)"', html).group(1)
         timestamp = re.search(r'"timestamp":([0-9]+)[^0-9]', html).group(1)
+
         def sign2(j, r):
             a = []
             p = []
             o = ''
             v = len(j)
 
-            for q in xrange(256):
+            for q in range(256):
                 a.append(ord(j[q % v]))
                 p.append(q)
 
             u = 0
-            for q in xrange(256):
+            for q in range(256):
                 u = (u + p[q] + a[q]) % 256
                 t = p[q]
                 p[q] = p[u]
@@ -657,7 +711,7 @@ class PCS(BaseClass):
 
             i = 0
             u = 0
-            for q in xrange(len(r)):
+            for q in range(len(r)):
                 i = (i + 1) % 256
                 u = (u + p[i]) % 256
                 t = p[i]
@@ -667,6 +721,7 @@ class PCS(BaseClass):
                 o += chr(ord(r[q]) ^ k)
 
             return base64.b64encode(o)
+
         self.dsign = sign2(sign3, sign1)
         self.timestamp = timestamp
 
@@ -701,7 +756,7 @@ class PCS(BaseClass):
         if not hasattr(self, 'dsign'):
             self.get_sign()
 
-        if isinstance(remote_path, str) or isinstance(remote_path, unicode):
+        if isinstance(remote_path, str) or isinstance(remote_path, str):
             remote_path = [remote_path]
 
         file_list = []
@@ -721,20 +776,24 @@ class PCS(BaseClass):
                 file_list.append(get_url(entry['dlink']))
 
         return file_list
-    def SharedDLinkForFS_IDList(self,fsid_list,shareid,uk,sign):
+
+    def SharedDLinkForFS_IDList(self, fsid_list, shareid, uk, sign):
         url = "https://pan.baidu.com/api/sharedownload"
-        SEKeyString=json.dumps({"sekey":urlparse.unquote(self.session.cookies["BDCLND"])});
-        data={
-                "encrypt":0,
-                "extra":SEKeyString,
-                "uk":uk,
-                "primaryid":shareid,
-                "product":"share",
-                "fid_list":json.dumps(fsid_list),
-                }
-        ReqHeader={"Referer":"https://pan.baidu.com/share/link?shareid="+shareid+"&uk="+uk}
-        Req=self._request(None, data=data,extra_params={"sign":sign,"clienttype":0,"timestamp":int(time.time())},url=url,headers=ReqHeader).content
+        SEKeyString = json.dumps({"sekey": urlparse.unquote(self.session.cookies["BDCLND"])});
+        data = {
+            "encrypt": 0,
+            "extra": SEKeyString,
+            "uk": uk,
+            "primaryid": shareid,
+            "product": "share",
+            "fid_list": json.dumps(fsid_list),
+        }
+        ReqHeader = {"Referer": "https://pan.baidu.com/share/link?shareid=" + shareid + "&uk=" + uk}
+        Req = self._request(None, data=data,
+                            extra_params={"sign": sign, "clienttype": 0, "timestamp": int(time.time())}, url=url,
+                            headers=ReqHeader).content
         return json.loads(Req)
+
     def save_album_file(self, album_id, from_uk, save_path, fsid_list):
         data = {
             "from_uk": from_uk,
@@ -742,9 +801,9 @@ class PCS(BaseClass):
             "to_path": save_path,
             "fsid_list": fsid_list}
         url = "http://pan.baidu.com/pcloud/album/transfertask/create"
-        print (self._request(None, data=data, url=url).content)
+        print(self._request(None, data=data, url=url).content)
 
-    def _verify_shared_file(self, shareid, uk, password,vcode="",vcode_str=""):
+    def _verify_shared_file(self, shareid, uk, password, vcode="", vcode_str=""):
         data = {
             "pwd": password,
             "vcode": vcode,
@@ -752,111 +811,113 @@ class PCS(BaseClass):
             "shareid": shareid,
             "uk": uk
         }
-        url = "http://pan.baidu.com/share/verify?shareid="+shareid+"&uk="+uk
+        url = "http://pan.baidu.com/share/verify?shareid=" + shareid + "&uk=" + uk
         return json.loads(self._request(None, data=data, url=url).content)
 
-    def _handle_shared_captcha(self,shareid,uk,password):#处理分享页的验证码
-        rep=json.loads(self._request(None,data={"prod":"shareverify"},url="https://pan.baidu.com/api/getcaptcha").content)
-        Vcode=self.captcha_func("https://pan.baidu.com/genimage?"+str(rep["vcode_str"]))
-        return self._verify_shared_file(shareid,uk,password,vcode=Vcode,vcode_str=str(rep["vcode_str"]))
-
-
+    def _handle_shared_captcha(self, shareid, uk, password):  # 处理分享页的验证码
+        rep = json.loads(
+                self._request(None, data={"prod": "shareverify"}, url="https://pan.baidu.com/api/getcaptcha").content)
+        Vcode = self.captcha_func("https://pan.baidu.com/genimage?" + str(rep["vcode_str"]))
+        return self._verify_shared_file(shareid, uk, password, vcode=Vcode, vcode_str=str(rep["vcode_str"]))
 
     def _save_shared_file_list(self, shareid, uk, path, file_list):
-        url = "http://pan.baidu.com/share/transfer?shareid="+shareid+"&from="+uk
+        url = "http://pan.baidu.com/share/transfer?shareid=" + shareid + "&from=" + uk
         data = {
             "filelist": json.dumps(file_list),
             "path": path
         }
         return json.loads(self._request(None, url=url, data=data).content)
-    def ListSharedFolder(self, shareid,uk,dirPath,page=1,number=100):
-        return json.loads(self.list_files(dirPath,extra_params={"shareid":shareid,
-                                "uk":uk,
-                                "web":'1',
-                                "page":page,
-                                "number":number,
-                                "showempty":0,
-                                "clienttype":0
-                                },isShare=True).text)
-    def _ScanFolder(self,shareid,uk,dirPath,filter_callback=None,InitFileList=None):
-        FileListCurrentDict=dict()
-        if InitFileList!=None:
-            FileList=InitFileList
+
+    def ListSharedFolder(self, shareid, uk, dirPath, page=1, number=100):
+        return json.loads(self.list_files(dirPath, extra_params={"shareid": shareid,
+                                                                 "uk": uk,
+                                                                 "web": '1',
+                                                                 "page": page,
+                                                                 "number": number,
+                                                                 "showempty": 0,
+                                                                 "clienttype": 0
+                                                                 }, isShare=True).text)
+
+    def _ScanFolder(self, shareid, uk, dirPath, filter_callback=None, InitFileList=None):
+        FileListCurrentDict = dict()
+        if InitFileList != None:
+            FileList = InitFileList
             for item in FileList:
-                FileListCurrentDict[item["server_filename"]]=self._ScanFolder(shareid,uk,item["server_filename"])
+                FileListCurrentDict[item["server_filename"]] = self._ScanFolder(shareid, uk, item["server_filename"])
 
         else:
-            FileList=self.ListSharedFolder(shareid,uk,dirPath,page=1,number=100)['list']
+            FileList = self.ListSharedFolder(shareid, uk, dirPath, page=1, number=100)['list']
         for Info in FileList:
-            PP=""
-            if(Info.has_key('parent_path')):
-                PP=Info['parent_path']
-            if(int(Info['isdir'])==1):
-                FileListCurrentDict[Info['path']]=self._ScanFolder(shareid,uk,PP+Info['path'])
+            PP = ""
+            if (Info.has_key('parent_path')):
+                PP = Info['parent_path']
+            if (int(Info['isdir']) == 1):
+                FileListCurrentDict[Info['path']] = self._ScanFolder(shareid, uk, PP + Info['path'])
             else:
-                if(FileListCurrentDict.has_key('Files')==False):
-                    FileListCurrentDict["Files"]=list()
+                if (FileListCurrentDict.has_key('Files') == False):
+                    FileListCurrentDict["Files"] = list()
                 FileListCurrentDict["Files"].append(Info)
         return FileListCurrentDict
 
-    def PrepareURL(self,URL,password=None,filter_callback=None):
+    def PrepareURL(self, URL, password=None, filter_callback=None):
         respond = self._request(None, url=URL)
         target_url = respond.url
-        shareid, uk= None, None#单文件分享url内有fid
+        shareid, uk = None, None  # 单文件分享url内有fid
         m = re.search(r"shareid=(\d+)", target_url)
         if m:
             shareid = m.group(1)
         m = re.search(r"uk=(\d+)", target_url)
         if m:
             uk = m.group(1)
-        html = self._request(None, url="https://pan.baidu.com/share/link?shareid="+str(shareid)+"&uk="+str(uk)).content
-        PWIndex=unicode(html,"utf-8").find(unicode("请输入提取密码","utf-8"))
-        if PWIndex > -1:#需要密码
-            if(password!=None):
-                errno=int(self._verify_shared_file(shareid,uk,password)["errno"])#0正常 -12验证码错误 -9提取码错误
-                if errno==0:
+        html = self._request(None,
+                             url="https://pan.baidu.com/share/link?shareid=" + str(shareid) + "&uk=" + str(uk)).content
+        PWIndex = unicode(html, "utf-8").find(unicode("请输入提取密码", "utf-8"))
+        if PWIndex > -1:  # 需要密码
+            if (password != None):
+                errno = int(self._verify_shared_file(shareid, uk, password)["errno"])  # 0正常 -12验证码错误 -9提取码错误
+                if errno == 0:
                     pass
-                elif errno==-12:
-                    #需要验证码
-                    errno=int(self._handle_shared_captcha(self,shareid,uk,password)["errno"])
-                elif errno==-9:
+                elif errno == -12:
+                    # 需要验证码
+                    errno = int(self._handle_shared_captcha(self, shareid, uk, password)["errno"])
+                elif errno == -9:
                     raise ValueError(u"Wrong Password")
                 else:
-                    raise ValueError(u"Unknown errno:"+errno)
+                    raise ValueError(u"Unknown errno:" + errno)
             else:
                 raise ValueError(u"This Shared File is Password-Protected")
-        return self._DownloadShareList(shareid,uk,filter_callback=filter_callback)
+        return self._DownloadShareList(shareid, uk, filter_callback=filter_callback)
 
-
-    def _DownloadShareList(self,shareid,uk,InitialPath="/", filter_callback=None):
-        #处理根目录列表
-        DownloadURLList=dict()
-        InitURL="https://pan.baidu.com/share/link?shareid="+str(shareid)+"&uk="+str(uk)
+    def _DownloadShareList(self, shareid, uk, InitialPath="/", filter_callback=None):
+        # 处理根目录列表
+        DownloadURLList = dict()
+        InitURL = "https://pan.baidu.com/share/link?shareid=" + str(shareid) + "&uk=" + str(uk)
         html = self._request(None, url=InitURL).content
-        r = re.compile(r".*yunData.setData\((\{\"loginstate.*\})\);.*")#搜索第二类context
+        r = re.compile(r".*yunData.setData\((\{\"loginstate.*\})\);.*")  # 搜索第二类context
         m = r.search(html)
         if m:
             context = json.loads(m.group(1))
-            fl=None
+            fl = None
             try:
-                fl = context['file_list']['list']#Root FileList
+                fl = context['file_list']['list']  # Root FileList
             except:
-                raise ValueError("File_List Not Found in HTML from: "+InitURL)
+                raise ValueError("File_List Not Found in HTML from: " + InitURL)
             for Item in fl:
-                if int(Item["isdir"])==1:
-                    DownloadURLList[Item["server_filename"]]=self._ScanFolder(shareid,uk,InitialPath+Item["server_filename"],filter_callback=None,InitFileList=None)
+                if int(Item["isdir"]) == 1:
+                    DownloadURLList[Item["server_filename"]] = self._ScanFolder(shareid, uk,
+                                                                                InitialPath + Item["server_filename"],
+                                                                                filter_callback=None, InitFileList=None)
                 else:
-                    DownloadURLList[Item["server_filename"]]=Item
+                    DownloadURLList[Item["server_filename"]] = Item
 
         else:
-            raise ValueError("yunData.setData Not Found in HTML from: "+InitURL)
+            raise ValueError("yunData.setData Not Found in HTML from: " + InitURL)
 
-        RSign=re.compile(r".*yunData\.sign = \"(.*)\";")#搜索sign
+        RSign = re.compile(r".*yunData\.sign = \"(.*)\";")  # 搜索sign
 
-        DownloadURLList["Sign"]=str(RSign.search(html).group(1))
+        DownloadURLList["Sign"] = str(RSign.search(html).group(1))
 
         return DownloadURLList
-
 
     def save_share_list(self, url, path, password=None, filter_callback=None):
         """ 保存分享文件列表到自己的网盘, 支持密码, 支持文件过滤的回调函数
@@ -998,9 +1059,6 @@ class PCS(BaseClass):
             # 获取文件列表失败
             return {"errno": -1, "error_msg": "PCS.save_share_list failed, mayby url is incorrect!"}
 
-
-
-
     # Deprecated
     # using download_url to get real download url
     def download(self, remote_path, **kwargs):
@@ -1100,7 +1158,7 @@ class PCS(BaseClass):
         return self._request('create', 'post', data=data, **kwargs)
 
     def list_files(self, remote_path, by="name", order="desc",
-                   limit=None, extra_params=None,isShare=False,**kwargs):
+                   limit=None, extra_params=None, isShare=False, **kwargs):
         """获取目录下的文件列表.
 
         :param remote_path: 网盘中目录的路径，必须以 / 开头。
@@ -1142,14 +1200,15 @@ class PCS(BaseClass):
             desc = "1"
         else:
             desc = "0"
-        params=dict();
-        if(extra_params!=None):
+        params = dict();
+        if (extra_params != None):
             params.update(extra_params)
-        params['dir']=remote_path
-        params['order']= by
-        params['desc']=desc
-        if(isShare):
-            return self._request('/share/list', None, extra_params=params,url="https://pan.baidu.com/share/list",**kwargs)
+        params['dir'] = remote_path
+        params['order'] = by
+        params['desc'] = desc
+        if (isShare):
+            return self._request('/share/list', None, extra_params=params, url="https://pan.baidu.com/share/list",
+                                 **kwargs)
         return self._request('list', 'list', extra_params=params, **kwargs)
 
     def move(self, path_list, dest, **kwargs):
@@ -1163,19 +1222,21 @@ class PCS(BaseClass):
         :type dest: str
 
         """
+
         def __path(path):
             if path.endswith('/'):
                 return path.split('/')[-2]
             else:
                 return os.path.basename(path)
+
         params = {
             'opera': 'move'
         }
         data = {
             'filelist': json.dumps([{
-                "path": path,
-                "dest": dest,
-                "newname": __path(path)} for path in path_list]),
+                                        "path": path,
+                                        "dest": dest,
+                                        "newname": __path(path)} for path in path_list]),
         }
         url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
         return self._request('filemanager', 'move', url=url, data=data, extra_params=params, **kwargs)
@@ -1199,7 +1260,7 @@ class PCS(BaseClass):
         }
 
         url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
-        print '请求url', url
+        print('请求url', url)
         logging.debug('rename ' + str(data) + 'URL:' + url)
         return self._request('filemanager', 'rename', url=url, data=data, extra_params=params, **kwargs)
 
@@ -1214,19 +1275,21 @@ class PCS(BaseClass):
         :type dest: str
 
         """
+
         def __path(path):
             if path.endswith('/'):
                 return path.split('/')[-2]
             else:
                 return os.path.basename(path)
+
         params = {
             'opera': 'copy'
         }
         data = {
             'filelist': json.dumps([{
-                "path": path,
-                "dest": dest,
-                "newname": __path(path)} for path in path_list]),
+                                        "path": path,
+                                        "dest": dest,
+                                        "newname": __path(path)} for path in path_list]),
         }
         url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
         return self._request('filemanager', 'move', url=url, data=data, extra_params=params, **kwargs)
@@ -1542,7 +1605,8 @@ class PCS(BaseClass):
         foo = json.loads(ret)
         return foo['total']
 
-    def list_download_tasks(self, need_task_info="1", asc="0", start=0, create_time=None, limit=1000, status="255", source_url=None, remote_path=None, **kwargs):
+    def list_download_tasks(self, need_task_info="1", asc="0", start=0, create_time=None, limit=1000, status="255",
+                            source_url=None, remote_path=None, **kwargs):
         """查询离线下载任务ID列表及任务信息.
 
         :param need_task_info: 是否需要返回任务信息:
@@ -1776,7 +1840,7 @@ class PCS(BaseClass):
                 'slice-md5': slice_md5,
                 'content-crc32': '%d' % (content_crc32.conjugate() & 0xFFFFFFFF)}
         logging.debug('RAPIDUPLOAD DATA ' + str(data))
-        #url = 'http://pan.baidu.com/api/rapidupload'
+        # url = 'http://pan.baidu.com/api/rapidupload'
         return self._request('rapidupload', 'rapidupload', data=data, **kwargs)
 
     def search(self, path, keyword, page=1, recursion=1, limit=1000, **kwargs):
@@ -1797,7 +1861,7 @@ class PCS(BaseClass):
                   'page': page,
                   'num': limit}
 
-        #url = 'http://pan.baidu.com/api/search'
+        # url = 'http://pan.baidu.com/api/search'
 
         return self._request('search', 'search', extra_params=params, **kwargs)
 
