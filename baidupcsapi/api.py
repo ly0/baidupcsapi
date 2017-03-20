@@ -1307,7 +1307,7 @@ class PCS(PCSBase):
                                         "newname": __path(path)} for path in path_list]),
         }
         url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
-        return self._request('filemanager', 'move', url=url, data=data, extra_params=params, **kwargs)
+        return self._request('filemanager', 'copy', url=url, data=data, extra_params=params, **kwargs)
 
     def delete(self, path_list, **kwargs):
         """
