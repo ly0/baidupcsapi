@@ -55,7 +55,7 @@ def default_captcha_handler(image_url):
     os_name = platform.system()
 
     if os_name == 'Windows':
-        subprocess.call([filename.decode('utf8').encode('cp936')], shell=True)
+        subprocess.call([filename.encode('cp936')], shell=True)
     elif os_name == 'Linux':
         subprocess.call(['gvfs-open', filename])
     elif os_name == 'Darwin':

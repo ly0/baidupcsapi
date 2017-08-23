@@ -2,7 +2,7 @@
 # coding=utf-8
 
 __title__ = 'baidupcsapi'
-__version__ = '0.9.0'
+__version__ = '0.9.1'
 __author__ = 'ly0, mozillazg101'
 __license__ = 'MIT'
 
@@ -40,7 +40,6 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
         'Topic :: Utilities',
     ],
     keywords='百度网盘, 百度云, API',
