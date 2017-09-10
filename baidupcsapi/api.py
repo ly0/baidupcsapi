@@ -350,7 +350,7 @@ class PCSBase(object):
             # 如果用户需要外部认证(邮箱)
             auth_token = re.findall(b'authtoken=([^&]+)', content)[0]
             resp = self.session.get('https://passport.baidu.com/v2/sapi/authwidgetverify',
-                                    params={'authtoken': auth_token,
+                                    params={'authtoken': urlparse.unquote(auth_token.decode()),
                                             'type': 'email',
                                             'apiver': 'v3',
                                             'action': 'send',
@@ -360,7 +360,9 @@ class PCSBase(object):
                                             'rsakey': '',
                                             'countrycode': '',
                                             'subpro': '',
-                                            'callback': ''
+                                            'callback': '',
+                                            'tpl': 'mn',
+                                            'u': 'https://www.baidu.com/'
                                             })
             if resp.ok:
                 while 1:
