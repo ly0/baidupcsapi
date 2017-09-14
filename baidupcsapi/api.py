@@ -55,7 +55,7 @@ def default_captcha_handler(image_url):
     os_name = platform.system()
 
     if os_name == 'Windows':
-        subprocess.call([filename.encode('cp936')], shell=True)
+        subprocess.call([filename], shell=True)
     elif os_name == 'Linux':
         subprocess.call(['gvfs-open', filename])
     elif os_name == 'Darwin':
@@ -226,8 +226,6 @@ class PCSBase(object):
             self.session.get('http://www.baidu.com')
             self.user['token'] = self._get_token()
             self._login()
-        else:
-            self.user['token'] = self._get_token()
 
     def _save_cookies(self):
         cookies_file = '.{0}.cookies'.format(self.username)
@@ -337,6 +335,8 @@ class PCSBase(object):
         logging.info('user %s Logged in BDUSS: %s' %
                      (self.username, self.user['BDUSS']))
 
+        self.user['token'] = self._get_token()
+
         self.user_info()
         self._save_cookies()
 
@@ -349,6 +349,7 @@ class PCSBase(object):
         if err_id == '120021':
             # 如果用户需要外部认证(邮箱)
             auth_token = re.findall(b'authtoken=([^&]+)', content)[0]
+            loginproxy_url = re.findall(b'loginproxy=([^&]+)', content)[0]
             resp = self.session.get('https://passport.baidu.com/v2/sapi/authwidgetverify',
                                     params={'authtoken': urlparse.unquote(auth_token.decode()),
                                             'type': 'email',
@@ -370,7 +371,7 @@ class PCSBase(object):
                     vcode = input('Verification Code> ')
 
                     vresp = self.session.get('https://passport.baidu.com/v2/sapi/authwidgetverify',
-                                             params={'authtoken': auth_token,
+                                             params={'authtoken': urlparse.unquote(auth_token.decode()),
                                                      'type': 'email',
                                                      'apiver': 'v3',
                                                      'action': 'check',
@@ -382,8 +383,14 @@ class PCSBase(object):
                                                      'subpro': '',
                                                      'callback': ''
                                                      })
-                    if vresp.ok:
-                        break
+
+                    vresp_data = json.loads(vresp.content.decode())
+                    if vresp_data['errno'] == 110000:
+
+                        loginproxy_resp = self.session.get(urlparse.unquote(loginproxy_url.decode()))
+
+
+                        return
             else:
                 raise LoginFailed("发送安全验证请求失败")
 
