@@ -245,6 +245,7 @@ class PCSBase(object):
                 logging.debug(str(cookies))
                 self.session.cookies = cookies
                 self.user['BDUSS'] = self.session.cookies['BDUSS']
+                self.user['token'] = self._get_token()
                 return True
         else:
             return False
