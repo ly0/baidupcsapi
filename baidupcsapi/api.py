@@ -1041,23 +1041,38 @@ class PCS(PCSBase):
         respond = self._request(None, url=url)
 
         target_url = respond.url
-        shareid, uk = None, None
-        m = re.search(r"shareid=(\d+)", target_url)
-        if m:
-            shareid = m.group(1)
-        m = re.search(r"uk=(\d+)", target_url)
-        if m:
-            uk = m.group(1)
+        surl = re.search(r"surl=([a-zA-Z\d]+)", target_url)
+        if surl is None:
+            surl = re.search(r"s/([a-zA-Z\d]+)", target_url).group(1)[1:]
+        else:
+            surl = surl.group(1)
 
-        # 检查验证码, 如果成功, 当前用户就被授权直接访问资源了
-        if shareid and uk and password:
-            verify_result = self._verify_shared_file(shareid, uk, password)
-            if not verify_result or verify_result['errno'] != 0:
-                return verify_result
+        data = {
+            "pwd": password,
+            "t": str(int(time.time())),
+        }
+        url = "http://pan.baidu.com/share/verify?surl=" + surl
+        verify_result = json.loads(self._request(None, data=data, url=url).content)
+        if not verify_result or verify_result['errno'] != 0:
+            return verify_result
+
+        # shareid, uk = None, None
+        # m = re.search(r"shareid=(\d+)", target_url)
+        # if m:
+        #     shareid = m.group(1)
+        # m = re.search(r"uk=(\d+)", target_url)
+        # if m:
+        #     uk = m.group(1)
+
+        # # 检查验证码, 如果成功, 当前用户就被授权直接访问资源了
+        # if shareid and uk and password:
+        #     verify_result = self._verify_shared_file(shareid, uk, password)
+        #     if not verify_result or verify_result['errno'] != 0:
+        #         return verify_result
 
         # 从html中解析文件列表, 同时把shareid, uk也解析出来
-        html = self._request(None, url=target_url).content
-        r = re.compile(r".*_context =(.*);.*")
+        html = self._request(None, url=target_url).text
+        r = re.compile(r".*yunData\.setData\((.*)\);.*")
         m = r.search(html)
         if m:
             context = json.loads(m.group(1))
