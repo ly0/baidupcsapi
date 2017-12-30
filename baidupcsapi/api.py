@@ -1072,7 +1072,7 @@ class PCS(PCSBase):
 
         # 从html中解析文件列表, 同时把shareid, uk也解析出来
         html = self._request(None, url=target_url).text
-        r = re.compile(r".*yunData\.setData\((.*)\);.*")
+        r = re.compile(r".*yunData\.setData\((.*?)\);.*")
         m = r.search(html)
         if m:
             context = json.loads(m.group(1))
