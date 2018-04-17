@@ -1766,6 +1766,21 @@ class PCS(PCSBase):
         return self._request('services/cloud_dl', 'cancel_task', url=url,
                              data=data, **kwargs)
 
+    def delete_download_task(self, task_id, **kwargs):
+        """删除离线下载任务.
+
+        :param task_id: 要删除的任务ID号。
+        :type task_id: str
+        :return: requests.Response
+        """
+
+        data = {
+            'task_id': task_id,
+        }
+        url = 'http://{0}/rest/2.0/services/cloud_dl'.format(BAIDUPAN_SERVER)
+        return self._request('services/cloud_dl', 'delete_task', url=url,
+                             data=data, **kwargs)
+
     def list_recycle_bin(self, order="time", desc="1", start=0, limit=1000, page=1, **kwargs):
         # Done
         """获取回收站中的文件及目录列表.
