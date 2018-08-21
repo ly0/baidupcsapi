@@ -125,6 +125,9 @@ def check_login(func):
     def wrapper(*args, **kwargs):
         ret = func(*args, **kwargs)
         if type(ret) == requests.Response:
+            # 检测结果是否为JSON
+            if ret.content[0]!=b'{' and ret.content[0]!=b'[':
+                return ret
             try:
                 foo = json.loads(ret.content.decode('utf-8'))
                 if 'errno' in foo and foo['errno'] == -6:
@@ -552,7 +555,7 @@ class PCS(PCSBase):
         """
         return self._request('quota', **kwargs)
 
-    def upload(self, dest_dir, file_handler, filename, ondup="newcopy", callback=None, **kwargs):
+    def upload(self, dest_dir, file_handler, filename, callback=None, **kwargs):
         """上传单个文件（<2G）.
 
         | 百度PCS服务目前支持最大2G的单个文件上传。
@@ -578,11 +581,6 @@ class PCS(PCSBase):
 
         :param filename:
 
-        :param ondup: （可选）
-
-                      * 'overwrite'：表示覆盖同名文件；
-                      * 'newcopy'：表示生成文件副本并进行重命名，命名规则为“
-                        文件名_日期.后缀”。
         :return: requests.Response 对象
 
             .. note::
@@ -593,9 +591,7 @@ class PCS(PCSBase):
         """
 
         params = {
-            'dest_dir': dest_dir,
-            'ondup': ondup,
-            'filename': filename
+            'path':str(dest_dir)+"/"+str(filename)
         }
 
         tmp_filename = ''.join(random.sample(string.ascii_letters, 10))

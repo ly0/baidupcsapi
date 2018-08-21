@@ -40,7 +40,7 @@ class RemoteDownload(object):
             'timeout': 60,
         }
 
-    def ruokuai_captcha_handler(s, params, image_url):
+    def ruokuai_captcha_handler(self, params, image_url):
         """
             若快自动识别验证码, 文档见: http://wiki.ruokuai.com/
         """
