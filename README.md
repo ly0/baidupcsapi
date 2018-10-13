@@ -56,7 +56,7 @@ Installation
 To install baidupcsapi, simply:
 
 ```shell
-$ pip install baidupcsapi
+$ pip3 install baidupcsapi
 ```
 
 一些简单的例子
@@ -64,8 +64,8 @@ $ pip install baidupcsapi
 ```python
 >>> from baidupcsapi import PCS
 >>> pcs = PCS('username','password')
->>> print pcs.quota().content
->>> print pcs.list_files('/').content
+>>> print(pcs.quota().content)
+>>> print(pcs.list_files('/').content)
 ```
 
 断点续传
