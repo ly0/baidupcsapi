@@ -57,7 +57,7 @@ def default_captcha_handler(image_url):
     if os_name == 'Windows':
         subprocess.call([filename], shell=True)
     elif os_name == 'Linux':
-        subprocess.call(['gvfs-open', filename])
+        subprocess.call(['gio', 'open', filename])
     elif os_name == 'Darwin':
         subprocess.call(['open', filename])
     else:
@@ -372,7 +372,7 @@ class PCSBase(object):
             if resp.ok:
                 while 1:
                     # get vcode
-                    vcode = input('Verification Code> ')
+                    vcode = input('Input Email Verification Code> ')
 
                     vresp = self.session.get('https://passport.baidu.com/v2/sapi/authwidgetverify',
                                              params={'authtoken': urlparse.unquote(auth_token.decode()),
@@ -694,8 +694,8 @@ class PCS(PCSBase):
         # refered:
         # https://github.com/PeterDing/iScript/blob/master/pan.baidu.com.py
         url = 'http://pan.baidu.com/disk/home'
-        resp = self.session.get(url)
-        html = resp.content
+        resp = self._request(None, None, url)
+        html = resp.content.decode()
         sign1 = re.search(r'"sign1":"([A-Za-z0-9]+)"', html).group(1)
         sign3 = re.search(r'"sign3":"([A-Za-z0-9]+)"', html).group(1)
         timestamp = re.search(r'"timestamp":([0-9]+)[^0-9]', html).group(1)
@@ -728,7 +728,7 @@ class PCS(PCSBase):
                 k = p[((p[i] + p[u]) % 256)]
                 o += chr(ord(r[q]) ^ k)
 
-            return base64.b64encode(o)
+            return base64.b64encode(o.encode())
 
         self.dsign = sign2(sign3, sign1)
         self.timestamp = timestamp
